@@ -39,7 +39,7 @@ public struct SimilarVideosView: View {
                 EmptyStateView(iconName: "exclamationmark.triangle.fill", title: "Error", message: msg)
             case .loaded(let groups):
                 VStack(spacing: 0) {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                             ForEach(groups) { group in
                                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
@@ -72,6 +72,7 @@ public struct SimilarVideosView: View {
                         }
                         .padding(AppTheme.Spacing.md)
                     }
+                    .scrollIndicators(.hidden)
 
                     if !viewModel.selectedItemIds.isEmpty {
                         bottomDeleteBar

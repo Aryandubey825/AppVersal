@@ -30,7 +30,7 @@ public struct MediaItem: Identifiable, Hashable, Sendable {
     }
 
     public nonisolated var isScreenshot: Bool {
-        mediaSubtypes.contains(.photoScreenshot)
+        mediaSubtypes.contains(.photoScreenshot) || PhotoLibraryService.isLikelyScreenshot(asset: asset)
     }
 
     public nonisolated var isVideo: Bool {

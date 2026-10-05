@@ -37,7 +37,7 @@ public struct TrashView: View {
                         headerBanner
 
                         // Trashed Media Grid
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             LazyVGrid(columns: columns, spacing: 8) {
                                 ForEach(trashManager.trashedItems) { item in
                                     ThumbnailCell(
@@ -50,6 +50,7 @@ public struct TrashView: View {
                             }
                             .padding(AppTheme.Spacing.md)
                         }
+                        .scrollIndicators(.hidden)
 
                         // Bottom Actions Bar
                         bottomActionBar

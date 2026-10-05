@@ -16,9 +16,20 @@ public final class TrashManager: ObservableObject {
     @Published public private(set) var trashedItems: [MediaItem] = []
 
     private let userDefaultsKey = "appversal_trashed_asset_ids"
+    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         loadTrashedItems()
+        setupObservers()
+    }
+
+    private func setupObservers() {
+        PhotoLibraryService.shared.libraryUpdatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.loadTrashedItems()
+            }
+            .store(in: &cancellables)
     }
 
     public func isTrashed(id: String) -> Bool {

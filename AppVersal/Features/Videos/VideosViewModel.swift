@@ -14,15 +14,35 @@ public final class VideosViewModel: ObservableObject {
     @Published public private(set) var isLoading: Bool = false
     @Published public var selectedItemIds: Set<String> = []
 
-    public init() {}
+    private var cancellables = Set<AnyCancellable>()
+
+    public init() {
+        setupObservers()
+    }
+
+    private func setupObservers() {
+        PhotoLibraryService.shared.libraryUpdatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.loadVideos()
+            }
+            .store(in: &cancellables)
+
+        TrashManager.shared.$trashedItems
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.loadVideos()
+            }
+            .store(in: &cancellables)
+    }
 
     public func loadVideos() {
         isLoading = true
+        let trashedIds = Set(TrashManager.shared.trashedItems.map { $0.id })
         Task.detached(priority: .userInitiated) {
             let fetched = PhotoLibraryService.shared.fetchVideos()
-            let filtered = await MainActor.run {
-                fetched.filter { !TrashManager.shared.isTrashed(id: $0.id) }
-            }
+            let filtered = fetched.filter { !trashedIds.contains($0.id) }
             await MainActor.run {
                 self.items = filtered
                 self.isLoading = false

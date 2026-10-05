@@ -29,10 +29,10 @@ public struct ExploreView: View {
                         message: "Your photo gallery contains no active photos or videos."
                     )
                 } else {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: AppTheme.Spacing.md) {
                             ForEach(viewModel.yearlyGroups) { group in
-                                NavigationLink(destination: YearDetailView(yearlyGroup: group)) {
+                                NavigationLink(destination: YearDetailView(year: group.year, exploreViewModel: viewModel)) {
                                     YearHeroCard(
                                         year: group.year,
                                         itemCount: group.items.count,
@@ -45,6 +45,7 @@ public struct ExploreView: View {
                         }
                         .padding(AppTheme.Spacing.md)
                     }
+                    .scrollIndicators(.hidden)
                 }
             }
             .navigationTitle("Explore")

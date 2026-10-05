@@ -18,6 +18,8 @@ public final class SimilarPhotoAnalyzer {
         public let currentGroups: [SimilarGroup]
     }
 
+    public static let similarityThreshold: Float = 0.52
+
     public static func analyze(items: [MediaItem]) -> AsyncStream<ProgressUpdate> {
         AsyncStream { continuation in
             let task = Task {
@@ -28,11 +30,16 @@ public final class SimilarPhotoAnalyzer {
                     return
                 }
 
+                // Sort by creation date descending so burst/consecutive photos are processed together
+                let sortedItems = items.sorted {
+                    ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
+                }
+
                 var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
                 var processedCount = 0
 
                 // Step 1: Extract Vision Feature Prints for candidate photos
-                for item in items {
+                for item in sortedItems {
                     if Task.isCancelled { break }
                     processedCount += 1
 
@@ -64,8 +71,8 @@ public final class SimilarPhotoAnalyzer {
                         var distance: Float = 0
                         do {
                             try primary.print.computeDistance(&distance, to: candidate.print)
-                            // Distance <= 0.45 indicates high visual similarity in Vision framework
-                            if distance <= 0.45 {
+                            // Distance <= similarityThreshold (0.52) indicates visual similarity in Vision framework
+                            if distance <= similarityThreshold {
                                 matches.append(candidate.item)
                                 distances.append(distance)
                                 visited.insert(candidate.item.id)
@@ -101,10 +108,15 @@ public final class SimilarPhotoAnalyzer {
     /// Fast scan returning similar count and first matched asset for card preview
     public static func quickScan(items: [MediaItem]) -> (count: Int, previewAsset: PHAsset?) {
         guard items.count > 1 else { return (0, nil) }
+
+        let sortedItems = items.sorted {
+            ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
+        }
+
         var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
 
-        // Extract prints for candidate comparison
-        for item in items.prefix(60) {
+        // Extract prints for candidate comparison (up to 80 newest photos)
+        for item in sortedItems.prefix(80) {
             if let print = extractFeaturePrint(for: item.asset) {
                 prints.append((item, print))
             }
@@ -117,7 +129,7 @@ public final class SimilarPhotoAnalyzer {
             for j in (i + 1)..<prints.count {
                 var distance: Float = 0
                 if (try? prints[i].print.computeDistance(&distance, to: prints[j].print)) != nil {
-                    if distance <= 0.45 {
+                    if distance <= similarityThreshold {
                         matchedIds.insert(prints[i].item.id)
                         matchedIds.insert(prints[j].item.id)
                         if preview == nil {

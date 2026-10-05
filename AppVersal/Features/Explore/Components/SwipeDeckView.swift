@@ -13,212 +13,149 @@ public struct SwipeDeckView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isAnimatingAction: Bool = false
 
-    public init(title: String, items: [MediaItem]) {
-        _viewModel = StateObject(wrappedValue: SwipeDeckViewModel(title: title, items: items))
+    public init(title: String, items: [MediaItem], monthId: String? = nil) {
+        _viewModel = StateObject(wrappedValue: SwipeDeckViewModel(title: title, items: items, monthId: monthId))
     }
 
     public var body: some View {
         ZStack {
-            // Background
-            Color(UIColor.systemBackground)
+            // Dark Ambient Background matching SwAipe
+            Color.black
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Apple HIG Header Bar
-                headerBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 10)
-
-                // Sleek Apple Progress Line
+                // Wide Progress Bar Pill
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color(UIColor.quaternarySystemFill))
-                            .frame(height: 3)
+                            .fill(Color.white.opacity(0.14))
+                            .frame(height: 8)
 
                         Capsule()
-                            .fill(Color.accentColor)
-                            .frame(width: max(3, geo.size.width * CGFloat(viewModel.progress)), height: 3)
+                            .fill(Color.white.opacity(0.75))
+                            .frame(width: max(8, geo.size.width * CGFloat(viewModel.progress)), height: 8)
                             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.progress)
                     }
                 }
-                .frame(height: 3)
+                .frame(height: 8)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .padding(.top, 10)
+
+                // Sub-header Row: "Swiped 0 / 4 elements" & "Saved 0 MB"
+                HStack {
+                    Text("Swiped \(viewModel.swipedCount) / \(viewModel.initialCount) elements")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.72))
+
+                    Spacer()
+
+                    Text("Saved \(viewModel.totalTrashedBytes > 0 ? ByteFormatter.format(viewModel.totalTrashedBytes) : "0 MB")")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.72))
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
 
                 if viewModel.isCompleted {
-                    // Apple HIG Celebration Completion Screen
                     completionView
                 } else if viewModel.remainingItems.isEmpty {
                     emptyDeckView
                 } else {
-                    // Card Deck
-                    cardDeckArea
+                    // Full SwAipe Stack Deck Area
+                    cardStackDeck
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
-
-                    // Apple HIG Bottom Control Dock
-                    bottomActionBar
-                        .padding(.horizontal, 32)
-                        .padding(.bottom, 20)
-                        .padding(.top, 14)
+                        .padding(.bottom, 18)
                 }
             }
         }
-    }
-
-    // MARK: - Apple HIG Standard Header Bar
-    private var headerBar: some View {
-        HStack {
-            // Standard iOS Close Button
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 30))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            // Centered Batch Title & Counter
-            VStack(spacing: 2) {
-                Text(viewModel.title)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                Text("Photo \(min(viewModel.initialCount, viewModel.swipedCount + 1)) of \(viewModel.initialCount)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            // Standard iOS Undo Button in Header
-            Button {
-                viewModel.undoLast()
-            } label: {
-                Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .font(.system(size: 30))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(viewModel.canUndo ? .orange : Color(UIColor.systemGray4))
-            }
-            .disabled(!viewModel.canUndo)
-        }
-    }
-
-    // MARK: - Card Stack Area
-    private var cardDeckArea: some View {
-        GeometryReader { geo in
-            ZStack {
-                // Next Card (Underneath Stack)
-                if let next = viewModel.nextItem {
-                    let dragProgress = min(1.0, abs(dragOffset.width) / 120.0)
-                    let scale = 0.94 + (0.06 * dragProgress)
-                    let yOffset = 14.0 - (14.0 * dragProgress)
-
-                    SwipeCardView(item: next, dragOffset: .zero, isTopCard: false)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .scaleEffect(scale)
-                        .offset(y: yOffset)
-                        .opacity(0.85 + (0.15 * dragProgress))
-                }
-
-                // Current Active Top Card
-                if let current = viewModel.currentItem {
-                    SwipeCardView(item: current, dragOffset: dragOffset, isTopCard: true)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .offset(x: dragOffset.width, y: dragOffset.height * 0.15)
-                        .rotationEffect(.degrees(Double(dragOffset.width / 18)))
-                        .gesture(
-                            DragGesture()
-                                .onChanged { gesture in
-                                    guard !isAnimatingAction else { return }
-                                    dragOffset = gesture.translation
-                                }
-                                .onEnded { gesture in
-                                    guard !isAnimatingAction else { return }
-                                    handleDragEnd(translation: gesture.translation)
-                                }
-                        )
-                }
-            }
-        }
-    }
-
-    // MARK: - Apple HIG Bottom Action Controls (Frosted Glass Materials)
-    private var bottomActionBar: some View {
-        HStack {
-            // Undo Button
-            Button {
-                viewModel.undoLast()
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 50, height: 50)
-                        .overlay(
-                            Circle()
-                                .stroke(Color(UIColor.separator).opacity(0.25), lineWidth: 0.5)
-                        )
-                        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
-
+        .navigationTitle(viewModel.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.undoLast()
+                } label: {
                     Image(systemName: "arrow.uturn.backward")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(viewModel.canUndo ? .orange : Color(UIColor.systemGray4))
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .disabled(!viewModel.canUndo)
+            }
+        }
+        .toolbar(.hidden, for: .tabBar)
+    }
+
+    // MARK: - SwAipe Card Stack Deck (Multi-layer overlapping tabs)
+    private var cardStackDeck: some View {
+        GeometryReader { geo in
+            let availableWidth = geo.size.width
+            let availableHeight = geo.size.height
+            let topStackSpace: CGFloat = 66
+            let cardHeight = max(240, availableHeight - topStackSpace)
+            let dragProgress = min(1.0, abs(dragOffset.width) / 120.0)
+
+            ZStack(alignment: .bottom) {
+                // Layer 4 (Farthest Back Card)
+                if viewModel.remainingItems.count > 3 {
+                    let item4 = viewModel.remainingItems[3]
+                    let targetY = -60.0 + (20.0 * dragProgress)
+                    let targetScale = 0.88 + (0.04 * dragProgress)
+                    SwipeCardView(item: item4, isTopCard: false)
+                        .frame(width: availableWidth, height: cardHeight)
+                        .scaleEffect(targetScale)
+                        .offset(y: targetY)
+                        .opacity(0.65)
+                }
+
+                // Layer 3 (Middle Back Card)
+                if viewModel.remainingItems.count > 2 {
+                    let item3 = viewModel.remainingItems[2]
+                    let targetY = -40.0 + (20.0 * dragProgress)
+                    let targetScale = 0.92 + (0.04 * dragProgress)
+                    SwipeCardView(item: item3, isTopCard: false)
+                        .frame(width: availableWidth, height: cardHeight)
+                        .scaleEffect(targetScale)
+                        .offset(y: targetY)
+                        .opacity(0.8)
+                }
+
+                // Layer 2 (Next Card)
+                if let next = viewModel.nextItem {
+                    let targetY = -20.0 + (20.0 * dragProgress)
+                    let targetScale = 0.96 + (0.04 * dragProgress)
+                    SwipeCardView(item: next, isTopCard: false)
+                        .frame(width: availableWidth, height: cardHeight)
+                        .scaleEffect(targetScale)
+                        .offset(y: targetY)
+                        .opacity(0.92)
+                }
+
+                // Layer 1: Active Front Card
+                if let current = viewModel.currentItem {
+                    SwipeCardView(
+                        item: current,
+                        dragOffset: dragOffset,
+                        isTopCard: true,
+                        onTrashTap: { triggerProgrammaticSwipe(direction: .trash) },
+                        onKeepTap: { triggerProgrammaticSwipe(direction: .keep) }
+                    )
+                    .frame(width: availableWidth, height: cardHeight)
+                    .offset(x: dragOffset.width, y: dragOffset.height * 0.15)
+                    .rotationEffect(.degrees(Double(dragOffset.width / 18)))
+                    .gesture(
+                        DragGesture()
+                            .onChanged { gesture in
+                                guard !isAnimatingAction else { return }
+                                dragOffset = gesture.translation
+                            }
+                            .onEnded { gesture in
+                                guard !isAnimatingAction else { return }
+                                handleDragEnd(translation: gesture.translation)
+                            }
+                    )
                 }
             }
-            .disabled(!viewModel.canUndo)
-
-            Spacer()
-
-            // Trash Button (Swipe Left)
-            Button {
-                triggerProgrammaticSwipe(direction: .trash)
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.red.opacity(0.12))
-                        .frame(width: 66, height: 66)
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(Color.red.opacity(0.35), lineWidth: 1)
-                        )
-                        .shadow(color: Color.red.opacity(0.18), radius: 8, x: 0, y: 4)
-
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.red)
-                }
-            }
-            .disabled(isAnimatingAction || viewModel.currentItem == nil)
-
-            Spacer()
-
-            // Keep Button (Swipe Right)
-            Button {
-                triggerProgrammaticSwipe(direction: .keep)
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.12))
-                        .frame(width: 66, height: 66)
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(Color.green.opacity(0.35), lineWidth: 1)
-                        )
-                        .shadow(color: Color.green.opacity(0.18), radius: 8, x: 0, y: 4)
-
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.green)
-                }
-            }
-            .disabled(isAnimatingAction || viewModel.currentItem == nil)
+            .frame(width: availableWidth, height: availableHeight, alignment: .bottom)
         }
     }
 
@@ -269,7 +206,7 @@ public struct SwipeDeckView: View {
         }
     }
 
-    // MARK: - Apple HIG Completion Celebration View
+    // MARK: - Completion Celebration View
     private var completionView: some View {
         VStack(spacing: AppTheme.Spacing.lg) {
             Spacer()
@@ -287,15 +224,15 @@ public struct SwipeDeckView: View {
             VStack(spacing: 6) {
                 Text("Review Complete")
                     .font(.title2.bold())
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
 
                 Text("All photos in \(viewModel.title) have been reviewed.")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
 
-            // iOS HIG Grouped Summary Card
+            // Grouped Summary Card
             VStack(spacing: 0) {
                 HStack {
                     Label("Photos Kept", systemImage: "checkmark.circle.fill")
@@ -303,7 +240,7 @@ public struct SwipeDeckView: View {
                     Spacer()
                     Text("\(viewModel.keptItems.count)")
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.white)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -317,7 +254,7 @@ public struct SwipeDeckView: View {
                     Spacer()
                     Text("\(viewModel.trashedItems.count)")
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.white)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -338,13 +275,12 @@ public struct SwipeDeckView: View {
                     .padding(.vertical, 14)
                 }
             }
-            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .background(Color(UIColor.secondarySystemGroupedBackground).opacity(0.35))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 24)
 
             Spacer()
 
-            // Primary Apple-style Action Button
             Button {
                 dismiss()
             } label: {
@@ -367,10 +303,10 @@ public struct SwipeDeckView: View {
             Spacer()
             Image(systemName: "photo.stack")
                 .font(.system(size: 48))
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.4))
             Text("No photos to review")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.6))
             Spacer()
         }
     }

@@ -16,7 +16,7 @@ public struct MonthGroup: Identifiable, Hashable, Sendable {
     public var items: [MediaItem]
     public let previewAsset: PHAsset?
 
-    public init(id: String, year: Int, month: Int, title: String, items: [MediaItem], previewAsset: PHAsset?) {
+    public nonisolated init(id: String, year: Int, month: Int, title: String, items: [MediaItem], previewAsset: PHAsset?) {
         self.id = id
         self.year = year
         self.month = month
@@ -31,6 +31,17 @@ public struct MonthGroup: Identifiable, Hashable, Sendable {
 
     public var formattedTotalSize: String {
         ByteFormatter.format(totalSizeBytes)
+    }
+
+    public var monthName: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMMM"
+        var comps = DateComponents()
+        comps.month = month
+        if let date = Calendar.current.date(from: comps) {
+            return fmt.string(from: date)
+        }
+        return title
     }
 
     public static func == (lhs: MonthGroup, rhs: MonthGroup) -> Bool {
@@ -48,7 +59,7 @@ public struct YearlyGroup: Identifiable, Hashable, Sendable {
     public var items: [MediaItem]
     public let previewAsset: PHAsset?
 
-    public init(year: Int, months: [MonthGroup], items: [MediaItem], previewAsset: PHAsset? = nil) {
+    public nonisolated init(year: Int, months: [MonthGroup], items: [MediaItem], previewAsset: PHAsset? = nil) {
         self.year = year
         self.months = months
         self.items = items
@@ -90,16 +101,13 @@ public final class ExploreViewModel: ObservableObject {
 
     public func loadYearlyGallery() {
         isLoading = true
+        let trashedIds = Set(TrashManager.shared.trashedItems.map { $0.id })
         Task.detached(priority: .userInitiated) {
             let photos = PhotoLibraryService.shared.fetchAllPhotos()
             let videos = PhotoLibraryService.shared.fetchVideos()
 
-            let activePhotos = await MainActor.run {
-                photos.filter { !TrashManager.shared.isTrashed(id: $0.id) }
-            }
-            let activeVideos = await MainActor.run {
-                videos.filter { !TrashManager.shared.isTrashed(id: $0.id) }
-            }
+            let activePhotos = photos.filter { !trashedIds.contains($0.id) }
+            let activeVideos = videos.filter { !trashedIds.contains($0.id) }
 
             let allItems = (activePhotos + activeVideos).sorted {
                 ($0.creationDate ?? Date.distantPast) > ($1.creationDate ?? Date.distantPast)
@@ -170,6 +178,13 @@ public final class ExploreViewModel: ObservableObject {
     }
 
     private func setupObservers() {
+        libraryService.libraryUpdatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.loadYearlyGallery()
+            }
+            .store(in: &cancellables)
+
         libraryService.changePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in

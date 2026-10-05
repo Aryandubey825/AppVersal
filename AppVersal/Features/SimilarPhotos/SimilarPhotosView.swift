@@ -39,7 +39,7 @@ public struct SimilarPhotosView: View {
                 EmptyStateView(iconName: "exclamationmark.triangle.fill", title: "Error", message: msg)
             case .loaded(let groups):
                 VStack(spacing: 0) {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                             ForEach(groups) { group in
                                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
@@ -72,6 +72,7 @@ public struct SimilarPhotosView: View {
                         }
                         .padding(AppTheme.Spacing.md)
                     }
+                    .scrollIndicators(.hidden)
 
                     if !viewModel.selectedItemIds.isEmpty {
                         bottomDeleteBar
@@ -94,9 +95,7 @@ public struct SimilarPhotosView: View {
             Spacer()
 
             Button(role: .destructive) {
-                Task {
-                    await viewModel.deleteSelected()
-                }
+                viewModel.deleteSelected()
             } label: {
                 Label("Delete Selected", systemImage: "trash.fill")
                     .font(.headline)

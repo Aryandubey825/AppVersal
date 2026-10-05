@@ -27,7 +27,7 @@ public struct VideosView: View {
                 )
             } else {
                 VStack(spacing: 0) {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVGrid(columns: columns, spacing: 8) {
                             ForEach(viewModel.items) { item in
                                 ThumbnailCell(
@@ -40,6 +40,7 @@ public struct VideosView: View {
                         }
                         .padding(12)
                     }
+                    .scrollIndicators(.hidden)
 
                     if !viewModel.selectedItemIds.isEmpty {
                         bottomDeleteBar
@@ -52,6 +53,9 @@ public struct VideosView: View {
         .onAppear {
             viewModel.loadVideos()
         }
+        .refreshable {
+            viewModel.loadVideos()
+        }
     }
 
     private var bottomDeleteBar: some View {
@@ -62,9 +66,7 @@ public struct VideosView: View {
             Spacer()
 
             Button(role: .destructive) {
-                Task {
-                    await viewModel.deleteSelected()
-                }
+                viewModel.deleteSelected()
             } label: {
                 Label("Delete", systemImage: "trash.fill")
                     .font(.headline)

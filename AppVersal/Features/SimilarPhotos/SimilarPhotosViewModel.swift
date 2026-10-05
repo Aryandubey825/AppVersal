@@ -14,8 +14,26 @@ public final class SimilarPhotosViewModel: ObservableObject {
     @Published public var selectedItemIds: Set<String> = []
 
     private var analysisTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
 
-    public init() {}
+    public init() {
+        setupObservers()
+    }
+
+    private func setupObservers() {
+        PhotoLibraryService.shared.libraryUpdatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                guard let self = self else { return }
+                switch self.state {
+                case .loaded, .empty:
+                    self.startAnalysis()
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     public func startAnalysis() {
         analysisTask?.cancel()

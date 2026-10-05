@@ -39,7 +39,7 @@ public struct LargeVideosView: View {
                 EmptyStateView(iconName: "exclamationmark.triangle.fill", title: "Error", message: msg)
             case .loaded(let videos):
                 VStack(spacing: 0) {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVGrid(columns: columns, spacing: 8) {
                             ForEach(videos) { item in
                                 ThumbnailCell(
@@ -52,6 +52,7 @@ public struct LargeVideosView: View {
                         }
                         .padding(12)
                     }
+                    .scrollIndicators(.hidden)
 
                     if !viewModel.selectedItemIds.isEmpty {
                         bottomDeleteBar
@@ -74,9 +75,7 @@ public struct LargeVideosView: View {
             Spacer()
 
             Button(role: .destructive) {
-                Task {
-                    await viewModel.deleteSelected()
-                }
+                viewModel.deleteSelected()
             } label: {
                 Label("Delete Selected", systemImage: "trash.fill")
                     .font(.headline)

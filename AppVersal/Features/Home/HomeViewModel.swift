@@ -101,6 +101,7 @@ public final class HomeViewModel: ObservableObject {
 
         // Retain stable preview assets without clearing
         setStablePreview(for: .screenshots, candidate: activeScreenshots.first?.asset, activeIds: Set(activeScreenshots.map { $0.id }))
+        setStablePreview(for: .videos, candidate: activeVideos.first?.asset, activeIds: Set(activeVideos.map { $0.id }))
 
         let sortedVideos = activeVideos.sorted { ($0.fileSize ?? 0) > ($1.fileSize ?? 0) }
         setStablePreview(for: .largeVideos, candidate: sortedVideos.first?.asset, activeIds: Set(sortedVideos.map { $0.id }))
@@ -108,11 +109,12 @@ public final class HomeViewModel: ObservableObject {
         let totalBytes = activeVideos.compactMap { $0.fileSize }.reduce(0, +)
         self.largeVideoTotalSize = totalBytes
 
-        // Background quick scan for real duplicates and similar photos
+        // Background quick scan for real duplicates and similar photos/videos
         Task.detached(priority: .userInitiated) {
             let dupResult = await DuplicatePhotoAnalyzer.quickScan(items: activePhotos)
             let simResult = await SimilarPhotoAnalyzer.quickScan(items: activePhotos)
             let dupVidResult = await DuplicateVideoAnalyzer.quickScan(items: activeVideos)
+            let simVidResult = await SimilarVideoAnalyzer.quickScan(items: activeVideos)
 
             let activePhotoIds = Set(activePhotos.map { $0.id })
             let activeVideoIds = Set(activeVideos.map { $0.id })
@@ -121,11 +123,12 @@ public final class HomeViewModel: ObservableObject {
                 self.categoryCounts[.duplicatePhotos] = dupResult.count
                 self.categoryCounts[.similarPhotos] = simResult.count
                 self.categoryCounts[.duplicateVideos] = dupVidResult.count
-                self.categoryCounts[.similarVideos] = 0
+                self.categoryCounts[.similarVideos] = simVidResult.count
 
                 self.setStablePreview(for: .duplicatePhotos, candidate: dupResult.previewAsset, activeIds: activePhotoIds)
                 self.setStablePreview(for: .similarPhotos, candidate: simResult.previewAsset, activeIds: activePhotoIds)
                 self.setStablePreview(for: .duplicateVideos, candidate: dupVidResult.previewAsset, activeIds: activeVideoIds)
+                self.setStablePreview(for: .similarVideos, candidate: simVidResult.previewAsset, activeIds: activeVideoIds)
             }
         }
     }
@@ -160,6 +163,15 @@ public final class HomeViewModel: ObservableObject {
     }
 
     private func setupObservers() {
+        libraryService.libraryUpdatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                Task {
+                    await self?.loadCounts(force: true)
+                }
+            }
+            .store(in: &cancellables)
+
         libraryService.changePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in

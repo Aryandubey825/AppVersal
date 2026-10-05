@@ -14,7 +14,7 @@ public struct HomeView: View {
 
     public var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                     // Top: Real iPhone Storage Card (used vs free space)
                     DeviceStorageCard(
@@ -24,23 +24,38 @@ public struct HomeView: View {
                         usedRatio: viewModel.storageUsedRatio
                     )
 
-                    // 1. Screenshots Section
+                    // 1. Screenshots & Videos Section
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                        Text("Screenshots")
+                        Text("Media")
                             .font(.title3.bold())
                             .padding(.horizontal, AppTheme.Spacing.xs)
 
-                        SwipeHeroCard(
-                            iconName: MediaCategory.screenshots.iconName,
-                            accentColor: MediaCategory.screenshots.themeColor,
-                            count: viewModel.categoryCounts[.screenshots],
-                            title: "Screenshots",
-                            subtitle: "Clean up unwanted screen captures",
-                            emptyTitle: "No Screenshots",
-                            emptyMessage: "We will automatically find new screenshots if you take more.",
-                            image: viewModel.previewImages[.screenshots]
-                        ) {
-                            selectedCategory = .screenshots
+                        VStack(spacing: AppTheme.Spacing.sm) {
+                            SwipeHeroCard(
+                                iconName: MediaCategory.screenshots.iconName,
+                                accentColor: MediaCategory.screenshots.themeColor,
+                                count: viewModel.categoryCounts[.screenshots],
+                                title: "Screenshots",
+                                subtitle: "Clean up unwanted screen captures",
+                                emptyTitle: "No Screenshots",
+                                emptyMessage: "We will automatically find new screenshots if you take more.",
+                                image: viewModel.previewImages[.screenshots]
+                            ) {
+                                selectedCategory = .screenshots
+                            }
+
+                            SwipeHeroCard(
+                                iconName: MediaCategory.videos.iconName,
+                                accentColor: MediaCategory.videos.themeColor,
+                                count: viewModel.categoryCounts[.videos],
+                                title: "Videos",
+                                subtitle: "Browse and manage all recorded videos",
+                                emptyTitle: "No Videos",
+                                emptyMessage: "No video files found in your gallery.",
+                                image: viewModel.previewImages[.videos]
+                            ) {
+                                selectedCategory = .videos
+                            }
                         }
                     }
 
@@ -141,6 +156,7 @@ public struct HomeView: View {
                 }
                 .padding(AppTheme.Spacing.md)
             }
+            .scrollIndicators(.hidden)
             .navigationTitle("Gallery Cleaner")
             .navigationDestination(item: $selectedCategory) { category in
                 destinationView(for: category)
