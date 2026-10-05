@@ -1,8 +1,3 @@
-//
-//  ByteFormatter.swift
-//  AppVersal
-//
-
 import Foundation
 
 public enum ByteFormatter: Sendable {

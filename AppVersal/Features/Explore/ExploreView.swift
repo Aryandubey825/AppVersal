@@ -1,8 +1,3 @@
-//
-//  ExploreView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Combine
 
@@ -32,7 +27,7 @@ public struct ExploreView: View {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: AppTheme.Spacing.md) {
                             ForEach(viewModel.yearlyGroups) { group in
-                                NavigationLink(destination: YearDetailView(year: group.year, exploreViewModel: viewModel)) {
+                                NavigationLink(value: group.year) {
                                     YearHeroCard(
                                         year: group.year,
                                         itemCount: group.items.count,
@@ -46,9 +41,13 @@ public struct ExploreView: View {
                         .padding(AppTheme.Spacing.md)
                     }
                     .scrollIndicators(.hidden)
+                    .scrollBounceBehavior(.basedOnSize)
                 }
             }
             .navigationTitle("Explore")
+            .navigationDestination(for: Int.self) { year in
+                YearDetailView(year: year, exploreViewModel: viewModel)
+            }
             .onAppear {
                 viewModel.loadYearlyGallery()
             }

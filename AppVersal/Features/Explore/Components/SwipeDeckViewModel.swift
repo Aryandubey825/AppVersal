@@ -1,12 +1,6 @@
-//
-//  SwipeDeckViewModel.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Photos
 import Combine
-import UIKit
 
 public enum SwipeAction: Sendable {
     case keep
@@ -29,10 +23,6 @@ public final class SwipeDeckViewModel: ObservableObject {
     @Published public private(set) var trashedItems: [MediaItem] = []
     @Published public private(set) var history: [SwipeHistoryItem] = []
     @Published public private(set) var isCompleted: Bool = false
-
-    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-    private let lightFeedback = UIImpactFeedbackGenerator(style: .light)
-    private let notificationFeedback = UINotificationFeedbackGenerator()
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -113,7 +103,6 @@ public final class SwipeDeckViewModel: ObservableObject {
 
     public func keepCurrent() {
         guard let item = currentItem else { return }
-        lightFeedback.impactOccurred()
         keptItems.append(item)
         history.append(SwipeHistoryItem(item: item, action: .keep))
         if let mid = monthId {
@@ -125,7 +114,6 @@ public final class SwipeDeckViewModel: ObservableObject {
 
     public func trashCurrent() {
         guard let item = currentItem else { return }
-        impactFeedback.impactOccurred()
         trashedItems.append(item)
         history.append(SwipeHistoryItem(item: item, action: .trash))
         TrashManager.shared.moveToTrash(items: [item])
@@ -138,7 +126,6 @@ public final class SwipeDeckViewModel: ObservableObject {
 
     public func undoLast() {
         guard let last = history.popLast() else { return }
-        lightFeedback.impactOccurred()
 
         switch last.action {
         case .keep:
@@ -158,7 +145,6 @@ public final class SwipeDeckViewModel: ObservableObject {
 
     private func checkCompletion() {
         if remainingItems.isEmpty {
-            notificationFeedback.notificationOccurred(.success)
             isCompleted = true
         }
     }

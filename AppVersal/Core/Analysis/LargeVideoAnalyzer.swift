@@ -1,8 +1,3 @@
-//
-//  LargeVideoAnalyzer.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import OSLog

@@ -1,10 +1,4 @@
-//
-//  ContentView.swift
-//  AppVersal
-//
-
 import SwiftUI
-import Combine
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -30,8 +24,8 @@ struct ContentView: View {
                 }
                 .tag(2)
         }
-        .tint(.accentColor)
-        .onChange(of: scenePhase) { oldPhase, newPhase in
+        .tint(.blue)
+        .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 PhotoLibraryService.shared.notifyLibraryChanged()
             }

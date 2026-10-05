@@ -1,8 +1,3 @@
-//
-//  Logger.swift
-//  AppVersal
-//
-
 import Foundation
 import OSLog
 

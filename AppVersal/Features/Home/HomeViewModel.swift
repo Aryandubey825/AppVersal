@@ -1,8 +1,3 @@
-//
-//  HomeViewModel.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Photos
 import Combine
@@ -19,7 +14,6 @@ public final class HomeViewModel: ObservableObject {
     @Published public var isAuthorizationGranted: Bool = false
     @Published public var isLimitedAccess: Bool = false
 
-    // Device Storage
     @Published public var totalDeviceStorage: Int64 = 0
     @Published public var usedDeviceStorage: Int64 = 0
     @Published public var freeDeviceStorage: Int64 = 0
@@ -76,12 +70,10 @@ public final class HomeViewModel: ObservableObject {
 
         guard isAuthorizationGranted else { return }
 
-        // Fetch raw assets
         let allPhotos = libraryService.fetchAllPhotos()
         let allVideos = libraryService.fetchVideos()
         let allScreenshots = libraryService.fetchScreenshots()
 
-        // Filter out items in Trash
         let activePhotos = allPhotos.filter { !TrashManager.shared.isTrashed(id: $0.id) }
         let activeVideos = allVideos.filter { !TrashManager.shared.isTrashed(id: $0.id) }
         let activeScreenshots = allScreenshots.filter { !TrashManager.shared.isTrashed(id: $0.id) }
@@ -99,7 +91,6 @@ public final class HomeViewModel: ObservableObject {
         counts[.similarPhotos] = self.categoryCounts[.similarPhotos] ?? 0
         self.categoryCounts = counts
 
-        // Retain stable preview assets without clearing
         setStablePreview(for: .screenshots, candidate: activeScreenshots.first?.asset, activeIds: Set(activeScreenshots.map { $0.id }))
         setStablePreview(for: .videos, candidate: activeVideos.first?.asset, activeIds: Set(activeVideos.map { $0.id }))
 
@@ -109,7 +100,6 @@ public final class HomeViewModel: ObservableObject {
         let totalBytes = activeVideos.compactMap { $0.fileSize }.reduce(0, +)
         self.largeVideoTotalSize = totalBytes
 
-        // Background quick scan for real duplicates and similar photos/videos
         Task.detached(priority: .userInitiated) {
             let dupResult = await DuplicatePhotoAnalyzer.quickScan(items: activePhotos)
             let simResult = await SimilarPhotoAnalyzer.quickScan(items: activePhotos)
@@ -133,20 +123,16 @@ public final class HomeViewModel: ObservableObject {
         }
     }
 
-    /// Preserves existing preview image and asset if still active, preventing card image flicker
     private func setStablePreview(for category: MediaCategory, candidate: PHAsset?, activeIds: Set<String>) {
         if let current = previewAssets[category] {
-            // If current asset is still active and not trashed/deleted, and we already have an image in memory, keep it completely stable!
             if activeIds.contains(current.localIdentifier) && previewImages[category] != nil {
                 return
             }
         }
 
-        // If candidate is available, update and pre-warm thumbnail cache
         if let candidate = candidate {
             previewAssets[category] = candidate
 
-            // Check cache synchronously first for instant UI response
             if let cached = HeroThumbnailCache.shared.image(for: candidate.localIdentifier) {
                 previewImages[category] = cached
             } else {

@@ -1,8 +1,3 @@
-//
-//  MediaItem.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 

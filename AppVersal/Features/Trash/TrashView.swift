@@ -1,8 +1,3 @@
-//
-//  TrashView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Combine
 
@@ -33,10 +28,8 @@ public struct TrashView: View {
                     }
                 } else {
                     VStack(spacing: 0) {
-                        // Summary Banner
                         headerBanner
 
-                        // Trashed Media Grid
                         ScrollView(showsIndicators: false) {
                             LazyVGrid(columns: columns, spacing: 8) {
                                 ForEach(trashManager.trashedItems) { item in
@@ -51,12 +44,15 @@ public struct TrashView: View {
                             .padding(AppTheme.Spacing.md)
                         }
                         .scrollIndicators(.hidden)
-
-                        // Bottom Actions Bar
-                        bottomActionBar
+                        .scrollBounceBehavior(.basedOnSize)
+                        .safeAreaInset(edge: .bottom) {
+                            bottomActionBar
+                                .background(.ultraThinMaterial)
+                        }
                     }
                 }
             }
+            .sensoryFeedback(.selection, trigger: selectedItemIds.count)
             .navigationTitle("Trash (\(trashManager.trashedItems.count))")
             .toolbar {
                 if !trashManager.trashedItems.isEmpty {
@@ -65,6 +61,8 @@ public struct TrashView: View {
                             showEmptyTrashAlert = true
                         }
                         .foregroundColor(.red)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
                 }
             }
@@ -105,6 +103,8 @@ public struct TrashView: View {
                 }
             }
             .font(.subheadline.bold())
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.vertical, AppTheme.Spacing.sm)
@@ -113,7 +113,6 @@ public struct TrashView: View {
 
     private var bottomActionBar: some View {
         HStack(spacing: AppTheme.Spacing.md) {
-            // Restore Button
             Button {
                 let itemsToRestore = trashManager.trashedItems.filter { selectedItemIds.contains($0.id) }
                 trashManager.restore(items: itemsToRestore.isEmpty ? trashManager.trashedItems : itemsToRestore)
@@ -125,13 +124,13 @@ public struct TrashView: View {
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .frame(height: 50)
                 .background(Color.blue)
                 .foregroundColor(.white)
                 .cornerRadius(10)
+                .contentShape(Rectangle())
             }
 
-            // Permanent Delete Button
             Button(role: .destructive) {
                 Task {
                     let itemsToDelete = trashManager.trashedItems.filter { selectedItemIds.contains($0.id) }
@@ -145,14 +144,14 @@ public struct TrashView: View {
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .frame(height: 50)
                 .background(Color.red)
                 .foregroundColor(.white)
                 .cornerRadius(10)
+                .contentShape(Rectangle())
             }
         }
         .padding(AppTheme.Spacing.md)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
     }
 
     private var recentlyDeletedInfoCard: some View {

@@ -1,9 +1,5 @@
-//
-//  YearHeroCard.swift
-//  AppVersal
-//
-
 import SwiftUI
+import UIKit
 import Photos
 
 public struct YearHeroCard: View {
@@ -34,7 +30,39 @@ public struct YearHeroCard: View {
 
     public var body: some View {
         ZStack(alignment: .bottom) {
-            // Full-bleed Image Background
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.35), Color.black.opacity(0.88)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(year))
+                        .font(.title.bold())
+                        .foregroundColor(.white)
+
+                    Text("\(itemCount) \(itemCount == 1 ? "item" : "items") • \(formattedSize)")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.white.opacity(0.9))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.trailing, 2)
+                    .padding(.bottom, 2)
+            }
+            .padding(.horizontal, 22)
+            .padding(.bottom, 20)
+            .allowsHitTesting(false)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 185)
+        .background {
             GeometryReader { geo in
                 if let img = thumbnailImage {
                     Image(uiImage: img)
@@ -55,41 +83,13 @@ public struct YearHeroCard: View {
                     )
                 }
             }
-
-            // Dark bottom gradient overlay
-            LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.35), Color.black.opacity(0.88)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 110)
-
-            // Overlaid Content & Chevron
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(String(year))
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-
-                    Text("\(itemCount) \(itemCount == 1 ? "item" : "items") • \(formattedSize)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.88))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white.opacity(0.9))
-                    .padding(.trailing, 2)
-                    .padding(.bottom, 2)
-            }
-            .padding(.horizontal, 22)
-            .padding(.bottom, 20)
         }
-        .frame(height: 185)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(year), \(itemCount) items, \(formattedSize)")
+        .accessibilityAddTraits(.isButton)
         .task(id: previewAsset?.localIdentifier) {
             await loadThumbnail()
         }
@@ -98,11 +98,29 @@ public struct YearHeroCard: View {
     private func loadThumbnail() async {
         guard let asset = previewAsset else { return }
         if let cached = HeroThumbnailCache.shared.image(for: asset.localIdentifier) {
-            self.thumbnailImage = cached
+            await MainActor.run {
+                self.thumbnailImage = cached
+            }
             return
         }
-        if let img = await HeroThumbnailCache.shared.loadThumbnail(for: asset) {
-            self.thumbnailImage = img
+
+        let targetSize = CGSize(width: 600, height: 350)
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+
+        PHImageManager.default().requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFill,
+            options: options
+        ) { [self] image, _ in
+            if let img = image {
+                Task { @MainActor in
+                    self.thumbnailImage = img
+                    HeroThumbnailCache.shared.setImage(img, for: asset.localIdentifier)
+                }
+            }
         }
     }
 }

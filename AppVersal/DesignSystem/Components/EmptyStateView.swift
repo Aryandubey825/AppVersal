@@ -1,11 +1,5 @@
-//
-//  EmptyStateView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import UIKit
-import Combine
 
 public struct EmptyStateView: View {
     public let iconName: String
@@ -26,7 +20,7 @@ public struct EmptyStateView: View {
                     .frame(width: 80, height: 80)
 
                 Image(systemName: iconName)
-                    .font(.system(size: 40))
+                    .font(.largeTitle)
                     .foregroundColor(.green)
             }
 
@@ -40,5 +34,7 @@ public struct EmptyStateView: View {
                 .padding(.horizontal, AppTheme.Spacing.lg)
         }
         .padding(AppTheme.Spacing.xl)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(message)")
     }
 }

@@ -1,8 +1,3 @@
-//
-//  MediaThumbnailService.swift
-//  AppVersal
-//
-
 import UIKit
 import Photos
 import Combine

@@ -1,8 +1,3 @@
-//
-//  TrashManager.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import Combine

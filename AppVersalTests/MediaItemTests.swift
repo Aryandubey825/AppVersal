@@ -1,8 +1,3 @@
-//
-//  MediaItemTests.swift
-//  AppVersalTests
-//
-
 import XCTest
 import Photos
 @testable import AppVersal
@@ -11,8 +6,7 @@ final class MediaItemTests: XCTestCase {
 
     func testFormattedDurationForVideo() {
         let asset = PHAsset()
-        var item = MediaItem(asset: asset)
-        // Verify formatted duration defaults safely
+        let item = MediaItem(asset: asset)
         XCTAssertEqual(item.formattedDuration, "")
     }
 

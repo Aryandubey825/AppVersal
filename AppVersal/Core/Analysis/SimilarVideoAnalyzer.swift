@@ -1,8 +1,3 @@
-//
-//  SimilarVideoAnalyzer.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import OSLog
@@ -27,7 +22,6 @@ public final class SimilarVideoAnalyzer {
                     return
                 }
 
-                // Sort by creation date descending
                 let sortedVideos = videoItems.sorted {
                     ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
                 }
@@ -88,7 +82,6 @@ public final class SimilarVideoAnalyzer {
         }
     }
 
-    /// Fast scan returning total similar video count and preview asset for cards
     public static func quickScan(items: [MediaItem]) -> (count: Int, previewAsset: PHAsset?) {
         let videoItems = items.filter { $0.isVideo }
         guard videoItems.count > 1 else { return (0, nil) }
@@ -107,7 +100,6 @@ public final class SimilarVideoAnalyzer {
 
             var matchesCount = 0
 
-            // Check against nearby items in date order
             let maxLookahead = min(sortedVideos.count, i + 25)
             for j in (i + 1)..<maxLookahead {
                 let candidate = sortedVideos[j]
@@ -135,7 +127,6 @@ public final class SimilarVideoAnalyzer {
         quickScan(items: items).count
     }
 
-    /// Evaluates if two videos represent similar takes, burst clips, or visually related recordings
     private static func evaluateVideoSimilarity(primary: MediaItem, candidate: MediaItem) -> Float? {
         let sameDimensions = (primary.pixelWidth == candidate.pixelWidth && primary.pixelHeight == candidate.pixelHeight) ||
                              (primary.pixelWidth == candidate.pixelHeight && primary.pixelHeight == candidate.pixelWidth)
@@ -145,17 +136,14 @@ public final class SimilarVideoAnalyzer {
         let durationDiff = abs(primary.duration - candidate.duration)
         guard durationDiff <= 3.5 else { return nil }
 
-        // Check capture time proximity if available
         let hasCloseDates: Bool
         let timeScore: Double
         if let d1 = primary.creationDate, let d2 = candidate.creationDate {
             let timeDiff = abs(d1.timeIntervalSince(d2))
-            // Videos within 15 minutes of each other (e.g. multiple takes or scene shots)
             if timeDiff <= 900 {
                 hasCloseDates = true
                 timeScore = max(0.6, 1.0 - (timeDiff / 1800.0))
             } else if durationDiff <= 1.0 {
-                // If duration is extremely close (<= 1.0s), allow up to 2 hours
                 hasCloseDates = timeDiff <= 7200
                 timeScore = max(0.5, 1.0 - (timeDiff / 7200.0))
             } else {
@@ -163,7 +151,6 @@ public final class SimilarVideoAnalyzer {
                 timeScore = 0.5
             }
         } else {
-            // Missing creation dates - rely on strict duration match
             hasCloseDates = durationDiff <= 1.5
             timeScore = 0.7
         }

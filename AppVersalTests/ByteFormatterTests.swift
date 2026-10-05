@@ -1,8 +1,3 @@
-//
-//  ByteFormatterTests.swift
-//  AppVersalTests
-//
-
 import XCTest
 @testable import AppVersal
 

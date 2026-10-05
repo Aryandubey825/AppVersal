@@ -1,8 +1,3 @@
-//
-//  DuplicatePhotoAnalyzer.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import CryptoKit
@@ -28,7 +23,6 @@ public final class DuplicatePhotoAnalyzer {
                     return
                 }
 
-                // Step 1: Pre-filter by dimensions (pixelWidth, pixelHeight)
                 var dimensionBuckets: [String: [MediaItem]] = [:]
                 for item in items {
                     let dimKey = "\(item.pixelWidth)x\(item.pixelHeight)"
@@ -45,7 +39,6 @@ public final class DuplicatePhotoAnalyzer {
                     let dimKey = "\(item.pixelWidth)x\(item.pixelHeight)"
                     let candidates = dimensionBuckets[dimKey] ?? []
 
-                    // If at least two photos have matching dimensions, compare content hash
                     if candidates.count > 1 {
                         if let hash = computeContentFingerprint(for: item.asset) {
                             let groupKey = "\(dimKey)_\(hash)"
@@ -70,7 +63,6 @@ public final class DuplicatePhotoAnalyzer {
         }
     }
 
-    /// Fast synchronous scan returning duplicate count and the first duplicate asset for card preview
     public static func quickScan(items: [MediaItem]) -> (count: Int, previewAsset: PHAsset?) {
         guard items.count > 1 else { return (0, nil) }
 
@@ -102,7 +94,6 @@ public final class DuplicatePhotoAnalyzer {
         quickScan(items: items).count
     }
 
-    /// Deterministic sorting of duplicate groups (newest photos first)
     private static func sortedDuplicateGroups(from fingerprintMap: [String: [MediaItem]]) -> [DuplicateGroup] {
         fingerprintMap.values
             .filter { $0.count > 1 }
@@ -120,7 +111,6 @@ public final class DuplicatePhotoAnalyzer {
             .map { DuplicateGroup(fingerprint: $0.first?.id ?? "", items: $0) }
     }
 
-    /// Synchronous 32x32 thumbnail pixel hash on background actor thread
     private static func computeContentFingerprint(for asset: PHAsset) -> String? {
         let options = PHImageRequestOptions()
         options.isSynchronous = true

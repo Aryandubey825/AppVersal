@@ -1,8 +1,3 @@
-//
-//  ExploreViewModel.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Photos
 import Combine
@@ -117,7 +112,6 @@ public final class ExploreViewModel: ObservableObject {
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "MMMM yyyy"
 
-            // Group by Month (Year + Month key)
             var monthlyBucket: [String: (year: Int, month: Int, title: String, items: [MediaItem])] = [:]
 
             for item in allItems {
@@ -136,7 +130,6 @@ public final class ExploreViewModel: ObservableObject {
                 }
             }
 
-            // Sort months newest first
             let sortedKeys = monthlyBucket.keys.sorted(by: >)
             let monthGroups = sortedKeys.compactMap { key -> MonthGroup? in
                 guard let data = monthlyBucket[key] else { return nil }
@@ -150,7 +143,6 @@ public final class ExploreViewModel: ObservableObject {
                 )
             }
 
-            // Group months by year
             var yearBucket: [Int: [MonthGroup]] = [:]
             for month in monthGroups {
                 yearBucket[month.year, default: []].append(month)

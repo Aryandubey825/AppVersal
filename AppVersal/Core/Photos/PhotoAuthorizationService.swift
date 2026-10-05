@@ -1,8 +1,3 @@
-//
-//  PhotoAuthorizationService.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import SwiftUI

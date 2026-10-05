@@ -1,8 +1,3 @@
-//
-//  SimilarGroup.swift
-//  AppVersal
-//
-
 import Foundation
 
 public struct SimilarGroup: Identifiable, Hashable, Sendable {

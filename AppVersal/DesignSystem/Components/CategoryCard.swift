@@ -1,11 +1,5 @@
-//
-//  CategoryCard.swift
-//  AppVersal
-//
-
 import SwiftUI
 import UIKit
-import Combine
 
 public struct CategoryCard: View {
     public let category: MediaCategory
@@ -29,7 +23,7 @@ public struct CategoryCard: View {
                         .frame(width: 48, height: 48)
 
                     Image(systemName: category.iconName)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.headline.weight(.semibold))
                         .foregroundColor(category.themeColor)
                 }
 
@@ -49,11 +43,11 @@ public struct CategoryCard: View {
                 VStack(alignment: .trailing, spacing: AppTheme.Spacing.xxs) {
                     if let size = formattedSize {
                         Text(size)
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.headline.weight(.bold))
                             .foregroundColor(category.themeColor)
                     } else if let count = itemCount {
                         Text("\(count)")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.headline.weight(.bold))
                             .foregroundColor(.primary)
                     } else {
                         ProgressView()
@@ -61,14 +55,17 @@ public struct CategoryCard: View {
                     }
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(Color(UIColor.tertiaryLabel))
                 }
             }
             .padding(AppTheme.Spacing.md)
             .appCardStyle()
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
         .accessibilityLabel("\(category.title), \(itemCount != nil ? "\(itemCount!) items" : formattedSize ?? "")")
+        .accessibilityAddTraits(.isButton)
     }
 }

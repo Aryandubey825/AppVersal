@@ -1,11 +1,5 @@
-//
-//  ProgressHeader.swift
-//  AppVersal
-//
-
 import SwiftUI
 import UIKit
-import Combine
 
 public struct ProgressHeader: View {
     public let title: String
@@ -28,8 +22,14 @@ public struct ProgressHeader: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
             HStack {
-                Text(title)
-                    .font(.headline)
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.blue)
+                        .symbolEffect(.pulse)
+
+                    Text(title)
+                        .font(.headline)
+                }
 
                 Spacer()
 
@@ -41,7 +41,7 @@ public struct ProgressHeader: View {
             }
 
             ProgressView(value: ratio)
-                .tint(.accentColor)
+                .tint(.blue)
 
             HStack {
                 Text("\(processed) / \(total) items analyzed")
@@ -57,5 +57,7 @@ public struct ProgressHeader: View {
         }
         .padding(AppTheme.Spacing.md)
         .appCardStyle()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title): \(processed) of \(total) items analyzed, \(Int(ratio * 100)) percent")
     }
 }

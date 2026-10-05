@@ -1,12 +1,6 @@
-//
-//  ThumbnailCell.swift
-//  AppVersal
-//
-
 import SwiftUI
 import UIKit
 import Photos
-import Combine
 
 public struct ThumbnailCell: View {
     public let item: MediaItem
@@ -22,34 +16,36 @@ public struct ThumbnailCell: View {
     }
 
     public var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            GeometryReader { geo in
-                ZStack(alignment: .topTrailing) {
-                    if let img = image {
-                        Image(uiImage: img)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color(UIColor.systemGray5))
-                            .overlay(
-                                Image(systemName: item.isVideo ? "video" : "photo")
-                                    .foregroundColor(.secondary)
-                            )
-                    }
+        Button {
+            onSelectToggle?()
+        } label: {
+            ZStack(alignment: .bottomTrailing) {
+                GeometryReader { geo in
+                    ZStack(alignment: .topTrailing) {
+                        if let img = image {
+                            Image(uiImage: img)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                        } else {
+                            Rectangle()
+                                .fill(Color(UIColor.systemGray5))
+                                .overlay(
+                                    Image(systemName: item.isVideo ? "video" : "photo")
+                                        .foregroundColor(.secondary)
+                                )
+                        }
 
-                    if let toggle = onSelectToggle {
-                        Button(action: toggle) {
+                        if onSelectToggle != nil {
                             ZStack {
                                 Circle()
-                                    .fill(isSelected ? Color.blue : Color.black.opacity(0.3))
+                                    .fill(isSelected ? Color.blue : Color.black.opacity(0.35))
                                     .frame(width: 26, height: 26)
 
                                 if isSelected {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 13, weight: .bold))
+                                        .font(.caption.weight(.bold))
                                         .foregroundColor(.white)
                                 } else {
                                     Circle()
@@ -57,39 +53,50 @@ public struct ThumbnailCell: View {
                                         .frame(width: 22, height: 22)
                                 }
                             }
-                            .padding(6)
+                            .frame(width: 44, height: 44)
+                            .padding(2)
                         }
                     }
                 }
-            }
-            .aspectRatio(1, contentMode: .fit)
+                .aspectRatio(1, contentMode: .fit)
 
-            // Video Duration & Size Overlay
-            if item.isVideo {
-                HStack(spacing: 4) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 9))
-                    Text(item.formattedDuration)
-                        .font(.caption2.bold())
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(Color.black.opacity(0.65))
-                .cornerRadius(4)
-                .padding(6)
-            } else if let size = item.fileSize {
-                Text(ByteFormatter.format(size))
-                    .font(.caption2.bold())
+                if item.isVideo {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.fill")
+                            .font(.caption2)
+                        Text(item.formattedDuration)
+                            .font(.caption2.bold())
+                    }
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(Color.black.opacity(0.65))
                     .cornerRadius(4)
                     .padding(6)
+                } else if let size = item.fileSize {
+                    Text(ByteFormatter.format(size))
+                        .font(.caption2.bold())
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.65))
+                        .cornerRadius(4)
+                        .padding(6)
+                }
             }
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small, style: .continuous)
+                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2.5)
+            )
+            .contentShape(Rectangle())
         }
-        .cornerRadius(AppTheme.CornerRadius.small)
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(item.isVideo ? "Video, duration \(item.formattedDuration)" : "Photo")
+        .accessibilityValue(item.fileSize != nil ? ByteFormatter.format(item.fileSize!) : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : [.isButton])
+        .accessibilityHint("Double tap to toggle selection")
         .task {
             if image == nil {
                 image = await MediaThumbnailService.shared.requestImage(for: item.asset)

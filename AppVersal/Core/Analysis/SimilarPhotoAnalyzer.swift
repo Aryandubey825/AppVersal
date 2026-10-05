@@ -1,8 +1,3 @@
-//
-//  SimilarPhotoAnalyzer.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import Vision
@@ -30,7 +25,6 @@ public final class SimilarPhotoAnalyzer {
                     return
                 }
 
-                // Sort by creation date descending so burst/consecutive photos are processed together
                 let sortedItems = items.sorted {
                     ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
                 }
@@ -38,7 +32,6 @@ public final class SimilarPhotoAnalyzer {
                 var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
                 var processedCount = 0
 
-                // Step 1: Extract Vision Feature Prints for candidate photos
                 for item in sortedItems {
                     if Task.isCancelled { break }
                     processedCount += 1
@@ -52,7 +45,6 @@ public final class SimilarPhotoAnalyzer {
                     }
                 }
 
-                // Step 2: Compare pairs
                 var visited = Set<String>()
                 var similarGroups: [SimilarGroup] = []
 
@@ -71,7 +63,6 @@ public final class SimilarPhotoAnalyzer {
                         var distance: Float = 0
                         do {
                             try primary.print.computeDistance(&distance, to: candidate.print)
-                            // Distance <= similarityThreshold (0.52) indicates visual similarity in Vision framework
                             if distance <= similarityThreshold {
                                 matches.append(candidate.item)
                                 distances.append(distance)
@@ -105,7 +96,6 @@ public final class SimilarPhotoAnalyzer {
         }
     }
 
-    /// Fast scan returning similar count and first matched asset for card preview
     public static func quickScan(items: [MediaItem]) -> (count: Int, previewAsset: PHAsset?) {
         guard items.count > 1 else { return (0, nil) }
 
@@ -115,7 +105,6 @@ public final class SimilarPhotoAnalyzer {
 
         var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
 
-        // Extract prints for candidate comparison (up to 80 newest photos)
         for item in sortedItems.prefix(80) {
             if let print = extractFeaturePrint(for: item.asset) {
                 prints.append((item, print))

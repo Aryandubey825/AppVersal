@@ -1,8 +1,3 @@
-//
-//  SwipeDeckView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Photos
 
@@ -19,12 +14,10 @@ public struct SwipeDeckView: View {
 
     public var body: some View {
         ZStack {
-            // Dark Ambient Background matching SwAipe
             Color.black
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Wide Progress Bar Pill
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -41,16 +34,15 @@ public struct SwipeDeckView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
 
-                // Sub-header Row: "Swiped 0 / 4 elements" & "Saved 0 MB"
                 HStack {
                     Text("Swiped \(viewModel.swipedCount) / \(viewModel.initialCount) elements")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.footnote.weight(.medium))
                         .foregroundColor(.white.opacity(0.72))
 
                     Spacer()
 
                     Text("Saved \(viewModel.totalTrashedBytes > 0 ? ByteFormatter.format(viewModel.totalTrashedBytes) : "0 MB")")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.footnote.weight(.medium))
                         .foregroundColor(.white.opacity(0.72))
                 }
                 .padding(.horizontal, 20)
@@ -62,7 +54,6 @@ public struct SwipeDeckView: View {
                 } else if viewModel.remainingItems.isEmpty {
                     emptyDeckView
                 } else {
-                    // Full SwAipe Stack Deck Area
                     cardStackDeck
                         .padding(.horizontal, 16)
                         .padding(.bottom, 18)
@@ -77,15 +68,20 @@ public struct SwipeDeckView: View {
                     viewModel.undoLast()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .disabled(!viewModel.canUndo)
+                .accessibilityLabel("Undo last swipe")
             }
         }
         .toolbar(.hidden, for: .tabBar)
+        .sensoryFeedback(.impact(weight: .light), trigger: viewModel.keptItems.count)
+        .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.trashedItems.count)
+        .sensoryFeedback(.success, trigger: viewModel.isCompleted)
     }
 
-    // MARK: - SwAipe Card Stack Deck (Multi-layer overlapping tabs)
     private var cardStackDeck: some View {
         GeometryReader { geo in
             let availableWidth = geo.size.width
@@ -95,7 +91,6 @@ public struct SwipeDeckView: View {
             let dragProgress = min(1.0, abs(dragOffset.width) / 120.0)
 
             ZStack(alignment: .bottom) {
-                // Layer 4 (Farthest Back Card)
                 if viewModel.remainingItems.count > 3 {
                     let item4 = viewModel.remainingItems[3]
                     let targetY = -60.0 + (20.0 * dragProgress)
@@ -107,7 +102,6 @@ public struct SwipeDeckView: View {
                         .opacity(0.65)
                 }
 
-                // Layer 3 (Middle Back Card)
                 if viewModel.remainingItems.count > 2 {
                     let item3 = viewModel.remainingItems[2]
                     let targetY = -40.0 + (20.0 * dragProgress)
@@ -119,7 +113,6 @@ public struct SwipeDeckView: View {
                         .opacity(0.8)
                 }
 
-                // Layer 2 (Next Card)
                 if let next = viewModel.nextItem {
                     let targetY = -20.0 + (20.0 * dragProgress)
                     let targetScale = 0.96 + (0.04 * dragProgress)
@@ -130,7 +123,6 @@ public struct SwipeDeckView: View {
                         .opacity(0.92)
                 }
 
-                // Layer 1: Active Front Card
                 if let current = viewModel.currentItem {
                     SwipeCardView(
                         item: current,
@@ -159,22 +151,18 @@ public struct SwipeDeckView: View {
         }
     }
 
-    // MARK: - Gesture Handling
     private func handleDragEnd(translation: CGSize) {
         let threshold: CGFloat = 110
 
         if translation.width > threshold {
-            // Fling Right -> Keep
             animateFling(to: CGSize(width: 600, height: translation.height)) {
                 viewModel.keepCurrent()
             }
         } else if translation.width < -threshold {
-            // Fling Left -> Trash
             animateFling(to: CGSize(width: -600, height: translation.height)) {
                 viewModel.trashCurrent()
             }
         } else {
-            // Snap back to center
             withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                 dragOffset = .zero
             }
@@ -206,7 +194,6 @@ public struct SwipeDeckView: View {
         }
     }
 
-    // MARK: - Completion Celebration View
     private var completionView: some View {
         VStack(spacing: AppTheme.Spacing.lg) {
             Spacer()
@@ -219,6 +206,7 @@ public struct SwipeDeckView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 64))
                     .foregroundColor(.green)
+                    .symbolEffect(.bounce)
             }
 
             VStack(spacing: 6) {
@@ -232,7 +220,6 @@ public struct SwipeDeckView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // Grouped Summary Card
             VStack(spacing: 0) {
                 HStack {
                     Label("Photos Kept", systemImage: "checkmark.circle.fill")
@@ -288,7 +275,7 @@ public struct SwipeDeckView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.accentColor)
+                    .background(Color.blue)
                     .foregroundColor(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }

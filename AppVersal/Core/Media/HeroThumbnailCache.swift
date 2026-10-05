@@ -1,8 +1,3 @@
-//
-//  HeroThumbnailCache.swift
-//  AppVersal
-//
-
 import UIKit
 import Photos
 import Combine
@@ -15,7 +10,7 @@ public final class HeroThumbnailCache {
 
     private init() {
         cache.countLimit = 100
-        cache.totalCostLimit = 100 * 1024 * 1024 // 100MB cache limit
+        cache.totalCostLimit = 100 * 1024 * 1024
     }
 
     public func image(for localIdentifier: String) -> UIImage? {
@@ -50,7 +45,6 @@ public final class HeroThumbnailCache {
                 options: options
             ) { [weak self] image, info in
                 if let img = image {
-                    // Always cache any received thumbnail immediately
                     self?.cache.setObject(img, forKey: key)
                     if !hasResumed {
                         hasResumed = true

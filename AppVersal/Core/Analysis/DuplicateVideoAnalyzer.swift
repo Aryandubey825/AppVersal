@@ -1,8 +1,3 @@
-//
-//  DuplicateVideoAnalyzer.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import CryptoKit
@@ -28,7 +23,6 @@ public final class DuplicateVideoAnalyzer {
                     return
                 }
 
-                // Step 1: Pre-filter by exact duration (ms precision) + fileSize
                 var metadataBucket: [String: [MediaItem]] = [:]
                 for item in videoItems {
                     let durationMs = Int((item.duration * 1000).rounded())

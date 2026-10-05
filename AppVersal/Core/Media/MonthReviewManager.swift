@@ -1,8 +1,3 @@
-//
-//  MonthReviewManager.swift
-//  AppVersal
-//
-
 import Foundation
 import Combine
 

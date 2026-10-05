@@ -1,8 +1,3 @@
-//
-//  SwipeCardView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Photos
 
@@ -31,14 +26,12 @@ public struct SwipeCardView: View {
 
     public var body: some View {
         ZStack(alignment: .top) {
-            // Card Container
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(Color(UIColor.secondarySystemBackground).opacity(0.85))
 
             if let img = image {
                 GeometryReader { geo in
                     ZStack {
-                        // Soft Ambient Blurred Backdrop (photo colors fill empty space for wide images)
                         Image(uiImage: img)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -47,7 +40,6 @@ public struct SwipeCardView: View {
                             .opacity(0.35)
                             .clipped()
 
-                        // 100% Uncut Full Photo (never cropped, never distorted)
                         Image(uiImage: img)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -63,42 +55,45 @@ public struct SwipeCardView: View {
                 }
             }
 
-            // Top Quick Action Badges (Trash & Heart) on Front Card
             if isTopCard {
                 HStack(spacing: 28) {
-                    // Trash Badge Button
                     Button {
                         onTrashTap?()
                     } label: {
                         ZStack {
                             Circle()
                                 .fill(Color.black.opacity(0.6))
-                                .frame(width: 48, height: 48)
+                                .frame(width: 52, height: 52)
 
                             Image(systemName: "trash.fill")
-                                .font(.system(size: 19, weight: .bold))
-                                .foregroundColor(Color(red: 1.0, green: 0.45, blue: 0.5))
+                                .font(.title3.weight(.bold))
+                                .foregroundColor(.pink)
                         }
+                        .frame(width: 52, height: 52)
+                        .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Move to Trash")
                     .scaleEffect(dragOffset.width < -20 ? 1.18 : 1.0)
                     .animation(.spring(response: 0.2), value: dragOffset.width)
 
-                    // Heart / Keep Badge Button
                     Button {
                         onKeepTap?()
                     } label: {
                         ZStack {
                             Circle()
                                 .fill(Color.black.opacity(0.6))
-                                .frame(width: 48, height: 48)
+                                .frame(width: 52, height: 52)
 
                             Image(systemName: "suit.heart.fill")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(Color(red: 0.45, green: 0.85, blue: 0.72))
+                                .font(.title3.weight(.bold))
+                                .foregroundColor(.mint)
                         }
+                        .frame(width: 52, height: 52)
+                        .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Keep photo")
                     .scaleEffect(dragOffset.width > 20 ? 1.18 : 1.0)
                     .animation(.spring(response: 0.2), value: dragOffset.width)
                 }
@@ -117,12 +112,10 @@ public struct SwipeCardView: View {
     }
 
     private func loadImage() async {
-        // Show cached low-res thumbnail immediately if available
         if let cached = HeroThumbnailCache.shared.image(for: item.id) {
             self.image = cached
         }
 
-        // Always request crisp, high-resolution original image so it never pixelates
         let options = PHImageRequestOptions()
         options.isSynchronous = false
         options.deliveryMode = .highQualityFormat

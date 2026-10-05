@@ -1,10 +1,4 @@
-//
-//  DeviceStorageCard.swift
-//  AppVersal
-//
-
 import SwiftUI
-import Combine
 
 public struct DeviceStorageCard: View {
     public let usedBytes: Int64
@@ -21,7 +15,6 @@ public struct DeviceStorageCard: View {
 
     public var body: some View {
         VStack(spacing: AppTheme.Spacing.md) {
-            // Header Row
             HStack(spacing: AppTheme.Spacing.md) {
                 ZStack {
                     Circle()
@@ -35,7 +28,7 @@ public struct DeviceStorageCard: View {
                         .frame(width: 48, height: 48)
 
                     Image(systemName: "internaldrive.fill")
-                        .font(.system(size: 22))
+                        .font(.title2)
                         .foregroundColor(.blue)
                 }
 
@@ -51,9 +44,8 @@ public struct DeviceStorageCard: View {
 
                 Spacer()
 
-                // Percentage Badge
                 Text("\(Int(usedRatio * 100))%")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.subheadline.bold())
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.blue.opacity(0.12))
@@ -61,7 +53,6 @@ public struct DeviceStorageCard: View {
                     .cornerRadius(12)
             }
 
-            // Sleek Gradient Progress Bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
@@ -81,7 +72,6 @@ public struct DeviceStorageCard: View {
             }
             .frame(height: 10)
 
-            // Storage Details Footer
             HStack {
                 HStack(spacing: 6) {
                     Circle()
@@ -106,5 +96,8 @@ public struct DeviceStorageCard: View {
         }
         .padding(AppTheme.Spacing.md)
         .appCardStyle()
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("iPhone Storage: \(ByteFormatter.format(usedBytes)) of \(ByteFormatter.format(totalBytes)) used, \(ByteFormatter.format(freeBytes)) free, \(Int(usedRatio * 100)) percent capacity used")
     }
 }

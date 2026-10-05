@@ -1,8 +1,3 @@
-//
-//  GalleryAnalysisActor.swift
-//  AppVersal
-//
-
 import Foundation
 
 @globalActor

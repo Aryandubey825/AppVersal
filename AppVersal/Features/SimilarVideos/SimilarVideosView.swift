@@ -1,13 +1,9 @@
-//
-//  SimilarVideosView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Combine
 
 public struct SimilarVideosView: View {
     @StateObject private var viewModel = SimilarVideosViewModel()
+    @State private var showDeleteConfirmation: Bool = false
 
     private let columns = [
         GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 8)
@@ -38,50 +34,66 @@ public struct SimilarVideosView: View {
             case .error(let msg):
                 EmptyStateView(iconName: "exclamationmark.triangle.fill", title: "Error", message: msg)
             case .loaded(let groups):
-                VStack(spacing: 0) {
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
-                            ForEach(groups) { group in
-                                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                                    HStack {
-                                        Text("\(group.allItems.count) Similar Videos")
-                                            .font(.headline)
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+                        ForEach(groups) { group in
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                                HStack {
+                                    Text("\(group.allItems.count) Similar Videos")
+                                        .font(.headline)
 
-                                        Spacer()
+                                    Spacer()
 
-                                        Text("\(Int(group.averageSimilarityScore * 100))% match")
-                                            .font(.caption.bold())
-                                            .foregroundColor(.teal)
-                                    }
-                                    .padding(.horizontal, 4)
+                                    Text("\(Int(group.averageSimilarityScore * 100))% match")
+                                        .font(.caption.bold())
+                                        .foregroundColor(.teal)
+                                }
+                                .padding(.horizontal, 4)
 
-                                    LazyVGrid(columns: columns, spacing: 8) {
-                                        ForEach(group.allItems) { item in
-                                            ThumbnailCell(
-                                                item: item,
-                                                isSelected: viewModel.selectedItemIds.contains(item.id)
-                                            ) {
-                                                viewModel.toggleSelection(id: item.id)
-                                            }
+                                LazyVGrid(columns: columns, spacing: 8) {
+                                    ForEach(group.allItems) { item in
+                                        ThumbnailCell(
+                                            item: item,
+                                            isSelected: viewModel.selectedItemIds.contains(item.id)
+                                        ) {
+                                            viewModel.toggleSelection(id: item.id)
                                         }
                                     }
                                 }
-                                .padding(AppTheme.Spacing.md)
-                                .appCardStyle()
                             }
+                            .padding(AppTheme.Spacing.md)
+                            .appCardStyle()
                         }
-                        .padding(AppTheme.Spacing.md)
                     }
-                    .scrollIndicators(.hidden)
-
+                    .padding(AppTheme.Spacing.md)
+                }
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+                .safeAreaInset(edge: .bottom) {
                     if !viewModel.selectedItemIds.isEmpty {
                         bottomDeleteBar
+                            .background(.ultraThinMaterial)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
             }
         }
+        .animation(.snappy, value: viewModel.selectedItemIds.isEmpty)
+        .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Similar Videos")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Move \(viewModel.selectedItemIds.count) similar videos to Trash?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Move to Trash", role: .destructive) {
+                viewModel.deleteSelected()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
+        }
         .onAppear {
             viewModel.startAnalysis()
         }
@@ -95,7 +107,7 @@ public struct SimilarVideosView: View {
             Spacer()
 
             Button(role: .destructive) {
-                viewModel.deleteSelected()
+                showDeleteConfirmation = true
             } label: {
                 Label("Move to Trash", systemImage: "trash.fill")
                     .font(.headline)
@@ -107,6 +119,5 @@ public struct SimilarVideosView: View {
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemGroupedBackground))
     }
 }

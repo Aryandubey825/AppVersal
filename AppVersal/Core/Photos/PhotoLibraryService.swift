@@ -1,8 +1,3 @@
-//
-//  PhotoLibraryService.swift
-//  AppVersal
-//
-
 import Foundation
 import Photos
 import Combine
@@ -49,7 +44,6 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
         libraryUpdatePublisher.send()
     }
 
-    // MARK: - Smart Screenshot Detection
     public nonisolated static func isLikelyScreenshot(asset: PHAsset) -> Bool {
         if asset.mediaSubtypes.contains(.photoScreenshot) {
             return true
@@ -103,12 +97,9 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
         return false
     }
 
-    // MARK: - Fetch Operations
-
     public nonisolated func fetchScreenshots() -> [MediaItem] {
         var assetMap: [String: PHAsset] = [:]
 
-        // 1. Fetch from Smart Album (.smartAlbumScreenshots)
         let smartAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumScreenshots, options: nil)
         smartAlbums.enumerateObjects { album, _, _ in
             let fetchResult = PHAsset.fetchAssets(in: album, options: nil)
@@ -117,7 +108,6 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
             }
         }
 
-        // 2. Fetch using mediaSubtype predicate
         let options = PHFetchOptions()
         options.predicate = NSPredicate(format: "(mediaSubtype & %d) != 0", PHAssetMediaSubtype.photoScreenshot.rawValue)
         let subtypeResult = PHAsset.fetchAssets(with: .image, options: options)
@@ -125,7 +115,6 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
             assetMap[asset.localIdentifier] = asset
         }
 
-        // 3. Detect downloaded / web / transferred screenshots
         let allImageOptions = PHFetchOptions()
         allImageOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let allImagesResult = PHAsset.fetchAssets(with: .image, options: allImageOptions)
@@ -157,8 +146,6 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
         return convertFetchResult(fetchResult)
     }
 
-    // MARK: - Resource File Size
-
     public nonisolated static func getFileSize(for asset: PHAsset) -> Int64? {
         let resources = PHAssetResource.assetResources(for: asset)
         for res in resources {
@@ -166,7 +153,6 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
                 return sizeNumber.int64Value
             }
         }
-        // Fallback for videos when resource KVC is unavailable
         if asset.mediaType == .video && asset.duration > 0 {
             let estimatedBytes = Int64(asset.duration * 2_500_000)
             return max(500_000, estimatedBytes)
@@ -174,16 +160,12 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
         return nil
     }
 
-    // MARK: - Asset Deletion
-
     public nonisolated func deleteAssets(_ assets: [PHAsset]) async throws {
         try await library.performChanges {
             PHAssetChangeRequest.deleteAssets(assets as NSArray)
         }
         AppLogger.photos.info("Successfully deleted \(assets.count) assets")
     }
-
-    // MARK: - Helpers
 
     private nonisolated func convertFetchResult(_ fetchResult: PHFetchResult<PHAsset>) -> [MediaItem] {
         var items: [MediaItem] = []
@@ -193,8 +175,6 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
         }
         return items
     }
-
-    // MARK: - PHPhotoLibraryChangeObserver
 
     public nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         changePublisher.send(changeInstance)

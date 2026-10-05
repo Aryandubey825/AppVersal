@@ -1,8 +1,3 @@
-//
-//  VideosViewModel.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Photos
 import Combine

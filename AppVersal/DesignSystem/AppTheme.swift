@@ -1,11 +1,5 @@
-//
-//  AppTheme.swift
-//  AppVersal
-//
-
 import SwiftUI
 import UIKit
-import Combine
 
 public enum AppTheme {
     public enum Spacing {

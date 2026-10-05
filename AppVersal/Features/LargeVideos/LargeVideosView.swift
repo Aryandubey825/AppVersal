@@ -1,13 +1,9 @@
-//
-//  LargeVideosView.swift
-//  AppVersal
-//
-
 import SwiftUI
 import Combine
 
 public struct LargeVideosView: View {
     @StateObject private var viewModel = LargeVideosViewModel()
+    @State private var showDeleteConfirmation: Bool = false
 
     private let columns = [
         GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 8)
@@ -38,30 +34,46 @@ public struct LargeVideosView: View {
             case .error(let msg):
                 EmptyStateView(iconName: "exclamationmark.triangle.fill", title: "Error", message: msg)
             case .loaded(let videos):
-                VStack(spacing: 0) {
-                    ScrollView(showsIndicators: false) {
-                        LazyVGrid(columns: columns, spacing: 8) {
-                            ForEach(videos) { item in
-                                ThumbnailCell(
-                                    item: item,
-                                    isSelected: viewModel.selectedItemIds.contains(item.id)
-                                ) {
-                                    viewModel.toggleSelection(id: item.id)
-                                }
+                ScrollView(showsIndicators: false) {
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        ForEach(videos) { item in
+                            ThumbnailCell(
+                                item: item,
+                                isSelected: viewModel.selectedItemIds.contains(item.id)
+                            ) {
+                                viewModel.toggleSelection(id: item.id)
                             }
                         }
-                        .padding(12)
                     }
-                    .scrollIndicators(.hidden)
-
+                    .padding(12)
+                }
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+                .safeAreaInset(edge: .bottom) {
                     if !viewModel.selectedItemIds.isEmpty {
                         bottomDeleteBar
+                            .background(.ultraThinMaterial)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
             }
         }
+        .animation(.snappy, value: viewModel.selectedItemIds.isEmpty)
+        .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Large Videos")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Move \(viewModel.selectedItemIds.count) large videos to Trash?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Move to Trash", role: .destructive) {
+                viewModel.deleteSelected()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
+        }
         .onAppear {
             viewModel.startAnalysis()
         }
@@ -75,7 +87,7 @@ public struct LargeVideosView: View {
             Spacer()
 
             Button(role: .destructive) {
-                viewModel.deleteSelected()
+                showDeleteConfirmation = true
             } label: {
                 Label("Delete Selected", systemImage: "trash.fill")
                     .font(.headline)
@@ -87,6 +99,5 @@ public struct LargeVideosView: View {
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemGroupedBackground))
     }
 }

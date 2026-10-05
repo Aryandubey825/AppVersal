@@ -1,8 +1,3 @@
-//
-//  SwipeHeroCard.swift
-//  AppVersal
-//
-
 import SwiftUI
 import UIKit
 import Photos
@@ -17,7 +12,7 @@ public struct SwipeHeroCard: View {
     public let emptyTitle: String
     public let emptyMessage: String
     public let image: UIImage?
-    public let action: () -> Void
+    public let action: (() -> Void)?
 
     public init(
         iconName: String,
@@ -29,7 +24,7 @@ public struct SwipeHeroCard: View {
         emptyTitle: String,
         emptyMessage: String,
         image: UIImage? = nil,
-        action: @escaping () -> Void
+        action: (() -> Void)? = nil
     ) {
         self.iconName = iconName
         self.accentColor = accentColor
@@ -71,51 +66,42 @@ public struct SwipeHeroCard: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        Group {
+            if let action = action {
+                Button(action: action) {
+                    cardContent
+                }
+                .buttonStyle(.plain)
+            } else {
+                cardContent
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(hasItems ? "\(title), \(formattedSize ?? countLabel)" : "\(emptyTitle), \(emptyMessage)")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var cardContent: some View {
+        Group {
             if hasItems {
                 populatedHeroCard
             } else {
                 emptyHeroCard
             }
         }
-        .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    // MARK: - Populated SwAipe-Style Hero Card (Zero-flicker Image Background)
     private var populatedHeroCard: some View {
         ZStack(alignment: .bottom) {
-            // Full-bleed Image Background
-            GeometryReader { geo in
-                if let img = image {
-                    Image(uiImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .clipped()
-                } else {
-                    // Stylized vibrant gradient background while image is requested
-                    LinearGradient(
-                        colors: [accentColor.opacity(0.85), accentColor.opacity(0.45)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .overlay(
-                        Image(systemName: iconName)
-                            .font(.system(size: 44, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
-                    )
-                }
-            }
-
-            // Dark gradient overlay on bottom for high text contrast
             LinearGradient(
                 colors: [Color.clear, Color.black.opacity(0.35), Color.black.opacity(0.88)],
-                startPoint: .top,
+                startPoint: .center,
                 endPoint: .bottom
             )
-            .frame(height: 110)
+            .allowsHitTesting(false)
 
-            // Overlaid Content & Chevron (matching SwAipe app design)
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -128,7 +114,7 @@ public struct SwipeHeroCard: View {
                             .foregroundColor(.white.opacity(0.9))
                     } else {
                         Text(countLabel)
-                            .font(.subheadline)
+                            .font(.subheadline.bold())
                             .foregroundColor(.white.opacity(0.85))
                     }
                 }
@@ -136,20 +122,44 @@ public struct SwipeHeroCard: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.headline.weight(.bold))
                     .foregroundColor(.white)
                     .padding(.trailing, 2)
                     .padding(.bottom, 2)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 18)
+            .allowsHitTesting(false)
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 195)
-        .cornerRadius(22)
+        .background {
+            GeometryReader { geo in
+                if let img = image {
+                    Image(uiImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                } else {
+                    LinearGradient(
+                        colors: [accentColor.opacity(0.85), accentColor.opacity(0.45)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .overlay(
+                        Image(systemName: iconName)
+                            .font(.system(size: 44, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                    )
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 6)
     }
 
-    // MARK: - Empty SwAipe-Style Card (Category SF Symbol, NO checkmark tick)
     private var emptyHeroCard: some View {
         HStack(spacing: AppTheme.Spacing.md) {
             ZStack {
@@ -158,17 +168,17 @@ public struct SwipeHeroCard: View {
                     .frame(width: 48, height: 48)
 
                 Image(systemName: iconName)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.headline.weight(.semibold))
                     .foregroundColor(accentColor)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(emptyTitle)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.headline)
                     .foregroundColor(.primary)
 
                 Text(emptyMessage)
-                    .font(.system(size: 13))
+                    .font(.footnote)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -181,5 +191,6 @@ public struct SwipeHeroCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
         )
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }

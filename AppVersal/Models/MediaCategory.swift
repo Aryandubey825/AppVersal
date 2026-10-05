@@ -1,8 +1,3 @@
-//
-//  MediaCategory.swift
-//  AppVersal
-//
-
 import SwiftUI
 
 public enum MediaCategory: String, CaseIterable, Identifiable, Sendable {

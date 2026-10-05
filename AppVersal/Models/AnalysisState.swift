@@ -1,8 +1,3 @@
-//
-//  AnalysisState.swift
-//  AppVersal
-//
-
 import Foundation
 
 public enum AnalysisState<T: Sendable>: Sendable {
