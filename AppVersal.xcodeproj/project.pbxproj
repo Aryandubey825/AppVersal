@@ -246,6 +246,8 @@
 				DEVELOPMENT_TEAM = 8TJU72SGJ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need access to your photo library to manage and clean duplicates.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to detect duplicate, similar, and large media files.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -278,6 +280,8 @@
 				DEVELOPMENT_TEAM = 8TJU72SGJ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need access to your photo library to manage and clean duplicates.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to detect duplicate, similar, and large media files.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -2,31 +2,15 @@
 //  AppVersalApp.swift
 //  AppVersal
 //
-//  Created by Aryan on 10/5/26.
-//
 
 import SwiftUI
-import SwiftData
+import Combine
 
 @main
 struct AppVersalApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
     }
 }
