@@ -14,18 +14,18 @@ public struct SwipeDeckView: View {
 
     public var body: some View {
         ZStack {
-            Color.black
+            Color(UIColor.systemBackground)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.white.opacity(0.14))
+                            .fill(Color(UIColor.systemGray5))
                             .frame(height: 8)
 
                         Capsule()
-                            .fill(Color.white.opacity(0.75))
+                            .fill(Color.primary.opacity(0.85))
                             .frame(width: max(8, geo.size.width * CGFloat(viewModel.progress)), height: 8)
                             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.progress)
                     }
@@ -37,13 +37,13 @@ public struct SwipeDeckView: View {
                 HStack {
                     Text("Swiped \(viewModel.swipedCount) / \(viewModel.initialCount) elements")
                         .font(.footnote.weight(.medium))
-                        .foregroundColor(.white.opacity(0.72))
+                        .foregroundColor(.secondary)
 
                     Spacer()
 
                     Text("Saved \(viewModel.totalTrashedBytes > 0 ? ByteFormatter.format(viewModel.totalTrashedBytes) : "0 MB")")
                         .font(.footnote.weight(.medium))
-                        .foregroundColor(.white.opacity(0.72))
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -212,11 +212,11 @@ public struct SwipeDeckView: View {
             VStack(spacing: 6) {
                 Text("Review Complete")
                     .font(.title2.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
 
                 Text("All photos in \(viewModel.title) have been reviewed.")
                     .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -227,7 +227,7 @@ public struct SwipeDeckView: View {
                     Spacer()
                     Text("\(viewModel.keptItems.count)")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -241,7 +241,7 @@ public struct SwipeDeckView: View {
                     Spacer()
                     Text("\(viewModel.trashedItems.count)")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -262,8 +262,9 @@ public struct SwipeDeckView: View {
                     .padding(.vertical, 14)
                 }
             }
-            .background(Color(UIColor.secondarySystemGroupedBackground).opacity(0.35))
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
             .padding(.horizontal, 24)
 
             Spacer()
@@ -290,10 +291,10 @@ public struct SwipeDeckView: View {
             Spacer()
             Image(systemName: "photo.stack")
                 .font(.system(size: 48))
-                .foregroundColor(.white.opacity(0.4))
+                .foregroundColor(.secondary.opacity(0.4))
             Text("No photos to review")
                 .font(.headline)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(.secondary)
             Spacer()
         }
     }

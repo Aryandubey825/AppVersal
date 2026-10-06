@@ -73,6 +73,10 @@ public final class SimilarPhotosViewModel: ObservableObject {
                     }
                 }
             }
+
+            if case .loading = self.state {
+                self.state = .empty
+            }
         }
     }
 
@@ -97,7 +101,26 @@ public final class SimilarPhotosViewModel: ObservableObject {
         guard !selected.isEmpty else { return }
 
         TrashManager.shared.moveToTrash(items: selected)
-        selectedItemIds.removeAll()
-        startAnalysis()
+        let deletedIds = selectedItemIds
+
+        let updatedGroups = groups.compactMap { group -> SimilarGroup? in
+            let remaining = group.allItems.filter { !deletedIds.contains($0.id) }
+            guard remaining.count >= 2 else { return nil }
+            return SimilarGroup(
+                id: group.id,
+                primaryItem: remaining[0],
+                similarItems: Array(remaining.dropFirst()),
+                averageSimilarityScore: group.averageSimilarityScore
+            )
+        }
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            selectedItemIds.removeAll()
+            if updatedGroups.isEmpty {
+                state = .empty
+            } else {
+                state = .loaded(updatedGroups)
+            }
+        }
     }
 }

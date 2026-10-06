@@ -13,91 +13,94 @@ public struct DeviceStorageCard: View {
         self.usedRatio = usedRatio
     }
 
+    private var percentage: Int {
+        min(100, max(0, Int(usedRatio * 100)))
+    }
+
     public var body: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            HStack(spacing: AppTheme.Spacing.md) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.blue.opacity(0.2), Color.purple.opacity(0.15)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 48, height: 48)
-
-                    Image(systemName: "internaldrive.fill")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("iPhone Storage")
-                        .font(.headline)
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Device Storage")
+                        .font(.title3.weight(.bold))
                         .foregroundColor(.primary)
 
-                    Text("\(ByteFormatter.format(usedBytes)) of \(ByteFormatter.format(totalBytes)) used")
+                    Text("\(ByteFormatter.format(usedBytes)) / \(ByteFormatter.format(totalBytes)) Used")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
-                Text("\(Int(usedRatio * 100))%")
-                    .font(.subheadline.bold())
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.blue.opacity(0.12))
-                    .foregroundColor(.blue)
-                    .cornerRadius(12)
-            }
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 10)
-
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.blue, Color.purple, Color.pink],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: max(10, geo.size.width * min(1.0, max(0.0, usedRatio))), height: 10)
-                }
-            }
-            .frame(height: 10)
-
-            HStack {
-                HStack(spacing: 6) {
+                ZStack {
                     Circle()
-                        .fill(Color.purple)
-                        .frame(width: 8, height: 8)
-                    Text("Used: \(ByteFormatter.format(usedBytes))")
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                        .stroke(Color.secondary.opacity(0.18), lineWidth: 4.5)
+
+                    Circle()
+                        .trim(from: 0, to: min(1.0, max(0.0, usedRatio)))
+                        .stroke(
+                            AngularGradient(
+                                gradient: Gradient(colors: [
+                                    Color.purple,
+                                    Color.pink,
+                                    Color.orange,
+                                    Color.purple
+                                ]),
+                                center: .center,
+                                startAngle: .degrees(-90),
+                                endAngle: .degrees(270)
+                            ),
+                            style: StrokeStyle(lineWidth: 4.5, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+
+                    Text("\(percentage)%")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(.primary)
+                }
+                .frame(width: 58, height: 58)
+            }
+
+            HStack(spacing: 40) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 8, height: 8)
+
+                        Text("Used")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text(ByteFormatter.format(usedBytes))
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.primary)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color(red: 0.0, green: 0.85, blue: 0.70))
+                            .frame(width: 8, height: 8)
+
+                        Text("Free")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text(ByteFormatter.format(freeBytes))
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.primary)
                 }
 
                 Spacer()
-
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 8, height: 8)
-                    Text("Free: \(ByteFormatter.format(freeBytes))")
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
-                }
             }
         }
-        .padding(AppTheme.Spacing.md)
+        .padding(AppTheme.Spacing.lg)
         .appCardStyle()
         .contentShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("iPhone Storage: \(ByteFormatter.format(usedBytes)) of \(ByteFormatter.format(totalBytes)) used, \(ByteFormatter.format(freeBytes)) free, \(Int(usedRatio * 100)) percent capacity used")
+        .accessibilityLabel("Device Storage: \(ByteFormatter.format(usedBytes)) of \(ByteFormatter.format(totalBytes)) used, \(ByteFormatter.format(freeBytes)) free, \(percentage) percent capacity used")
     }
 }

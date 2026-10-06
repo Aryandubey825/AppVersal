@@ -66,10 +66,9 @@ public struct DuplicateVideosView: View {
                                             Spacer()
 
                                             Text(ByteFormatter.format(group.reclaimableSizeByte) + " reclaimable")
-                                                .font(.caption.bold())
+                                                .font(.subheadline.weight(.semibold))
                                                 .foregroundColor(.indigo)
                                         }
-                                        .padding(.horizontal, 4)
 
                                         LazyVGrid(columns: columns, spacing: 8) {
                                             ForEach(group.items) { item in
@@ -82,8 +81,6 @@ public struct DuplicateVideosView: View {
                                             }
                                         }
                                     }
-                                    .padding(AppTheme.Spacing.md)
-                                    .appCardStyle()
                                 }
                             }
                             .padding(.horizontal, AppTheme.Spacing.md)
@@ -100,6 +97,18 @@ public struct DuplicateVideosView: View {
                                 ) {
                                     showDeleteConfirmation = true
                                 }
+                                .confirmationDialog(
+                                    viewModel.selectedItemIds.count == 1 ? "Move 1 duplicate video to Trash?" : "Move \(viewModel.selectedItemIds.count) duplicate videos to Trash?",
+                                    isPresented: $showDeleteConfirmation,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Move to Trash", role: .destructive) {
+                                        viewModel.deleteSelected()
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("These duplicate video copies will be moved to the in-app Trash where you can restore them anytime.")
+                                }
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
@@ -111,20 +120,10 @@ public struct DuplicateVideosView: View {
         .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Duplicate Videos")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            "Move \(viewModel.selectedItemIds.count) duplicate videos to Trash?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                viewModel.deleteSelected()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("These duplicate video copies will be moved to the in-app Trash where you can restore them anytime.")
-        }
         .onAppear {
-            viewModel.startAnalysis()
+            if case .idle = viewModel.state {
+                viewModel.startAnalysis()
+            }
         }
     }
 }

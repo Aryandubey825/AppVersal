@@ -28,18 +28,12 @@ public final class VideosViewModel: ObservableObject {
                 self?.loadVideos()
             }
             .store(in: &cancellables)
-
-        TrashManager.shared.$trashedItems
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.loadVideos()
-            }
-            .store(in: &cancellables)
     }
 
     public func loadVideos() {
-        isLoading = true
+        if items.isEmpty {
+            isLoading = true
+        }
         let trashedIds = Set(TrashManager.shared.trashedItems.map { $0.id })
         Task.detached(priority: .userInitiated) {
             let fetched = PhotoLibraryService.shared.fetchVideos()
@@ -64,7 +58,10 @@ public final class VideosViewModel: ObservableObject {
         guard !selected.isEmpty else { return }
 
         TrashManager.shared.moveToTrash(items: selected)
-        selectedItemIds.removeAll()
-        loadVideos()
+        let deletedIds = selectedItemIds
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            items.removeAll { deletedIds.contains($0.id) }
+            selectedItemIds.removeAll()
+        }
     }
 }

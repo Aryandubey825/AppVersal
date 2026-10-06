@@ -13,7 +13,10 @@ public final class SimilarPhotoAnalyzer {
         public let currentGroups: [SimilarGroup]
     }
 
-    public static let similarityThreshold: Float = 0.52
+    public static let similarityThreshold: Float = 0.48
+    public static let closeTimeSimilarityThreshold: Float = 0.50
+    public static let defaultSimilarityThreshold: Float = 0.44
+    public static let maxTimeIntervalBetweenShots: TimeInterval = 48 * 3600
 
     public static func analyze(items: [MediaItem]) -> AsyncStream<ProgressUpdate> {
         AsyncStream { continuation in
@@ -40,9 +43,14 @@ public final class SimilarPhotoAnalyzer {
                         prints.append((item, featurePrint))
                     }
 
-                    if processedCount % 5 == 0 || processedCount == total {
+                    if processedCount % 5 == 0 && processedCount < total {
                         continuation.yield(ProgressUpdate(processed: processedCount, total: total, currentGroups: []))
                     }
+                }
+
+                if Task.isCancelled {
+                    continuation.finish()
+                    return
                 }
 
                 var visited = Set<String>()
@@ -60,10 +68,32 @@ public final class SimilarPhotoAnalyzer {
                         let candidate = prints[j]
                         if visited.contains(candidate.item.id) { continue }
 
+                        let timeDiff: TimeInterval?
+                        if let d1 = primary.item.creationDate, let d2 = candidate.item.creationDate {
+                            timeDiff = abs(d1.timeIntervalSince(d2))
+                        } else {
+                            timeDiff = nil
+                        }
+
+                        if let diff = timeDiff, diff > maxTimeIntervalBetweenShots {
+                            break
+                        }
+
+                        if timeDiff == nil && (j - i) > 25 {
+                            break
+                        }
+
+                        let threshold: Float
+                        if let diff = timeDiff, diff <= 1800 {
+                            threshold = closeTimeSimilarityThreshold
+                        } else {
+                            threshold = defaultSimilarityThreshold
+                        }
+
                         var distance: Float = 0
                         do {
                             try primary.print.computeDistance(&distance, to: candidate.print)
-                            if distance <= similarityThreshold {
+                            if distance <= threshold {
                                 matches.append(candidate.item)
                                 distances.append(distance)
                                 visited.insert(candidate.item.id)
@@ -76,7 +106,7 @@ public final class SimilarPhotoAnalyzer {
                     if !matches.isEmpty {
                         visited.insert(primary.item.id)
                         let avgDistance = distances.reduce(0, +) / Float(distances.count)
-                        let score = max(0.0, 1.0 - avgDistance)
+                        let score = max(0.5, min(0.99, 1.0 - (avgDistance * 0.85)))
                         let group = SimilarGroup(primaryItem: primary.item, similarItems: matches, averageSimilarityScore: score)
                         similarGroups.append(group)
                     }
@@ -105,7 +135,7 @@ public final class SimilarPhotoAnalyzer {
 
         var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
 
-        for item in sortedItems.prefix(80) {
+        for item in sortedItems.prefix(120) {
             if let print = extractFeaturePrint(for: item.asset) {
                 prints.append((item, print))
             }
@@ -115,14 +145,40 @@ public final class SimilarPhotoAnalyzer {
         var preview: PHAsset? = nil
 
         for i in 0..<prints.count {
+            let primary = prints[i]
             for j in (i + 1)..<prints.count {
+                let candidate = prints[j]
+                if matchedIds.contains(candidate.item.id) { continue }
+
+                let timeDiff: TimeInterval?
+                if let d1 = primary.item.creationDate, let d2 = candidate.item.creationDate {
+                    timeDiff = abs(d1.timeIntervalSince(d2))
+                } else {
+                    timeDiff = nil
+                }
+
+                if let diff = timeDiff, diff > maxTimeIntervalBetweenShots {
+                    break
+                }
+
+                if timeDiff == nil && (j - i) > 25 {
+                    break
+                }
+
+                let threshold: Float
+                if let diff = timeDiff, diff <= 1800 {
+                    threshold = closeTimeSimilarityThreshold
+                } else {
+                    threshold = defaultSimilarityThreshold
+                }
+
                 var distance: Float = 0
-                if (try? prints[i].print.computeDistance(&distance, to: prints[j].print)) != nil {
-                    if distance <= similarityThreshold {
-                        matchedIds.insert(prints[i].item.id)
-                        matchedIds.insert(prints[j].item.id)
+                if (try? primary.print.computeDistance(&distance, to: candidate.print)) != nil {
+                    if distance <= threshold {
+                        matchedIds.insert(primary.item.id)
+                        matchedIds.insert(candidate.item.id)
                         if preview == nil {
-                            preview = prints[i].item.asset
+                            preview = primary.item.asset
                         }
                     }
                 }
@@ -138,7 +194,7 @@ public final class SimilarPhotoAnalyzer {
     private static func extractFeaturePrint(for asset: PHAsset) -> VNFeaturePrintObservation? {
         let options = PHImageRequestOptions()
         options.isSynchronous = true
-        options.deliveryMode = .highQualityFormat
+        options.deliveryMode = .fastFormat
         options.resizeMode = .fast
         options.isNetworkAccessAllowed = true
 

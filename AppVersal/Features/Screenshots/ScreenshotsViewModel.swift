@@ -28,18 +28,12 @@ public final class ScreenshotsViewModel: ObservableObject {
                 self?.loadScreenshots()
             }
             .store(in: &cancellables)
-
-        TrashManager.shared.$trashedItems
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.loadScreenshots()
-            }
-            .store(in: &cancellables)
     }
 
     public func loadScreenshots() {
-        isLoading = true
+        if items.isEmpty {
+            isLoading = true
+        }
         let trashedIds = Set(TrashManager.shared.trashedItems.map { $0.id })
         Task.detached(priority: .userInitiated) {
             let fetched = PhotoLibraryService.shared.fetchScreenshots()
@@ -64,7 +58,10 @@ public final class ScreenshotsViewModel: ObservableObject {
         guard !selected.isEmpty else { return }
 
         TrashManager.shared.moveToTrash(items: selected)
-        selectedItemIds.removeAll()
-        loadScreenshots()
+        let deletedIds = selectedItemIds
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            items.removeAll { deletedIds.contains($0.id) }
+            selectedItemIds.removeAll()
+        }
     }
 }

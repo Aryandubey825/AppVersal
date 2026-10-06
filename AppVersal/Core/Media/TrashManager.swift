@@ -92,9 +92,15 @@ public final class TrashManager: ObservableObject {
         }
 
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: savedIds, options: nil)
-        var items: [MediaItem] = []
+        var assetMap: [String: PHAsset] = [:]
         fetchResult.enumerateObjects { asset, _, _ in
-            items.append(MediaItem(asset: asset, fileSize: PhotoLibraryService.getFileSize(for: asset)))
+            assetMap[asset.localIdentifier] = asset
+        }
+        var items: [MediaItem] = []
+        for id in savedIds {
+            if let asset = assetMap[id] {
+                items.append(MediaItem(asset: asset, fileSize: PhotoLibraryService.getFileSize(for: asset)))
+            }
         }
         self.trashedItems = items
     }

@@ -92,7 +92,21 @@ public final class DuplicateVideosViewModel: ObservableObject {
         guard !selected.isEmpty else { return }
 
         TrashManager.shared.moveToTrash(items: selected)
-        selectedItemIds.removeAll()
-        startAnalysis()
+        let deletedIds = selectedItemIds
+
+        let updatedGroups = groups.compactMap { group -> DuplicateGroup? in
+            let remaining = group.items.filter { !deletedIds.contains($0.id) }
+            guard remaining.count >= 2 else { return nil }
+            return DuplicateGroup(id: group.id, fingerprint: group.fingerprint, items: remaining)
+        }
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            selectedItemIds.removeAll()
+            if updatedGroups.isEmpty {
+                state = .empty
+            } else {
+                state = .loaded(updatedGroups)
+            }
+        }
     }
 }

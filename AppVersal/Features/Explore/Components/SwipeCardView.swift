@@ -51,7 +51,7 @@ public struct SwipeCardView: View {
                 ZStack {
                     Color(UIColor.secondarySystemBackground)
                     ProgressView()
-                        .tint(.white)
+                        .tint(.primary)
                 }
             }
 
@@ -103,9 +103,9 @@ public struct SwipeCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 0.5)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.24), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 7)
         .task(id: item.id) {
             await loadImage()
         }

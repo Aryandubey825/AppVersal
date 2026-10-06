@@ -80,6 +80,18 @@ public struct LargeVideosView: View {
                                 ) {
                                     showDeleteConfirmation = true
                                 }
+                                .confirmationDialog(
+                                    viewModel.selectedItemIds.count == 1 ? "Move 1 large video to Trash?" : "Move \(viewModel.selectedItemIds.count) large videos to Trash?",
+                                    isPresented: $showDeleteConfirmation,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Move to Trash", role: .destructive) {
+                                        viewModel.deleteSelected()
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
+                                }
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
@@ -91,20 +103,10 @@ public struct LargeVideosView: View {
         .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Large Videos")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            "Move \(viewModel.selectedItemIds.count) large videos to Trash?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                viewModel.deleteSelected()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
-        }
         .onAppear {
-            viewModel.startAnalysis()
+            if case .idle = viewModel.state {
+                viewModel.startAnalysis()
+            }
         }
     }
 }

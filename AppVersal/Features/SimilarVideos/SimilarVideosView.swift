@@ -66,10 +66,9 @@ public struct SimilarVideosView: View {
                                             Spacer()
 
                                             Text("\(Int(group.averageSimilarityScore * 100))% match")
-                                                .font(.caption.bold())
+                                                .font(.subheadline.weight(.semibold))
                                                 .foregroundColor(.teal)
                                         }
-                                        .padding(.horizontal, 4)
 
                                         LazyVGrid(columns: columns, spacing: 8) {
                                             ForEach(group.allItems) { item in
@@ -82,8 +81,6 @@ public struct SimilarVideosView: View {
                                             }
                                         }
                                     }
-                                    .padding(AppTheme.Spacing.md)
-                                    .appCardStyle()
                                 }
                             }
                             .padding(.horizontal, AppTheme.Spacing.md)
@@ -100,6 +97,18 @@ public struct SimilarVideosView: View {
                                 ) {
                                     showDeleteConfirmation = true
                                 }
+                                .confirmationDialog(
+                                    viewModel.selectedItemIds.count == 1 ? "Move 1 similar video to Trash?" : "Move \(viewModel.selectedItemIds.count) similar videos to Trash?",
+                                    isPresented: $showDeleteConfirmation,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Move to Trash", role: .destructive) {
+                                        viewModel.deleteSelected()
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
+                                }
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
@@ -111,20 +120,10 @@ public struct SimilarVideosView: View {
         .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Similar Videos")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            "Move \(viewModel.selectedItemIds.count) similar videos to Trash?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                viewModel.deleteSelected()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
-        }
         .onAppear {
-            viewModel.startAnalysis()
+            if case .idle = viewModel.state {
+                viewModel.startAnalysis()
+            }
         }
     }
 }

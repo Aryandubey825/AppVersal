@@ -52,27 +52,37 @@ public struct SwAipeMonthStackCard: View {
             HStack(spacing: 8) {
                 Text(month.monthName)
                     .font(.title2.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
 
                 Image(systemName: "chevron.right")
                     .font(.headline.bold())
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(.secondary)
 
                 Spacer()
             }
 
             ZStack(alignment: .bottom) {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(UIColor.secondarySystemBackground).opacity(0.4))
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                    )
                     .frame(height: 220)
                     .scaleEffect(0.90)
                     .offset(y: -14)
+                    .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
 
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(UIColor.secondarySystemBackground).opacity(0.65))
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
                     .frame(height: 225)
                     .scaleEffect(0.95)
                     .offset(y: -7)
+                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
 
                 mainCardFront
             }

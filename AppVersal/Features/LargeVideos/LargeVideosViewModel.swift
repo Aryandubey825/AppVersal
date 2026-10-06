@@ -87,7 +87,16 @@ public final class LargeVideosViewModel: ObservableObject {
         guard !selected.isEmpty else { return }
 
         TrashManager.shared.moveToTrash(items: selected)
-        selectedItemIds.removeAll()
-        startAnalysis()
+        let deletedIds = selectedItemIds
+        let remaining = videos.filter { !deletedIds.contains($0.id) }
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            selectedItemIds.removeAll()
+            if remaining.isEmpty {
+                state = .empty
+            } else {
+                state = .loaded(remaining)
+            }
+        }
     }
 }

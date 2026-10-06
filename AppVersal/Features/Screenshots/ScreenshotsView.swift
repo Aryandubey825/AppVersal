@@ -69,6 +69,18 @@ public struct ScreenshotsView: View {
                         ) {
                             showDeleteConfirmation = true
                         }
+                        .confirmationDialog(
+                            viewModel.selectedItemIds.count == 1 ? "Move 1 screenshot to Trash?" : "Move \(viewModel.selectedItemIds.count) screenshots to Trash?",
+                            isPresented: $showDeleteConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Move to Trash", role: .destructive) {
+                                viewModel.deleteSelected()
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("These screenshots will be moved to the in-app Trash where you can restore them anytime.")
+                        }
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -78,20 +90,10 @@ public struct ScreenshotsView: View {
         .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Screenshots")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            "Move \(viewModel.selectedItemIds.count) screenshots to Trash?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                viewModel.deleteSelected()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("These screenshots will be moved to the in-app Trash where you can restore them anytime.")
-        }
         .onAppear {
-            viewModel.loadScreenshots()
+            if viewModel.items.isEmpty && !viewModel.isLoading {
+                viewModel.loadScreenshots()
+            }
         }
         .refreshable {
             viewModel.loadScreenshots()

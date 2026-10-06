@@ -69,6 +69,18 @@ public struct VideosView: View {
                         ) {
                             showDeleteConfirmation = true
                         }
+                        .confirmationDialog(
+                            viewModel.selectedItemIds.count == 1 ? "Move 1 video to Trash?" : "Move \(viewModel.selectedItemIds.count) videos to Trash?",
+                            isPresented: $showDeleteConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Move to Trash", role: .destructive) {
+                                viewModel.deleteSelected()
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
+                        }
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -78,20 +90,10 @@ public struct VideosView: View {
         .sensoryFeedback(.selection, trigger: viewModel.selectedItemIds.count)
         .navigationTitle("Videos")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            "Move \(viewModel.selectedItemIds.count) videos to Trash?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                viewModel.deleteSelected()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("These videos will be moved to the in-app Trash where you can restore them anytime.")
-        }
         .onAppear {
-            viewModel.loadVideos()
+            if viewModel.items.isEmpty && !viewModel.isLoading {
+                viewModel.loadVideos()
+            }
         }
         .refreshable {
             viewModel.loadVideos()
