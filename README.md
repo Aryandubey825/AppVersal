@@ -105,18 +105,7 @@ AppVersal/
 
 ---
 
-## 🛠️ How to Build and Run
 
-1. Clone or open the repository:
-   ```bash
-   cd /Users/aryan/Documents/GitHub/Appversel/AppVersal
-   ```
-2. Double-click `AppVersal.xcodeproj` to open in **Xcode**.
-3. Select your target device or simulator (e.g., iPhone 15 Pro, iOS 17+).
-4. Press **⌘ + R** to run.
-5. On the first launch, grant **Photo Library Access** when prompted.
-
----
 
 ## 🔒 Permissions & Privacy
 
