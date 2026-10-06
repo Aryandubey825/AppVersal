@@ -1,7 +1,5 @@
 import Foundation
 import Photos
-import Vision
-import UIKit
 import OSLog
 
 @GalleryAnalysisActor
@@ -13,110 +11,115 @@ public final class SimilarPhotoAnalyzer {
         public let currentGroups: [SimilarGroup]
     }
 
-    public static let similarityThreshold: Float = 0.48
-    public static let closeTimeSimilarityThreshold: Float = 0.50
-    public static let defaultSimilarityThreshold: Float = 0.44
-    public static let maxTimeIntervalBetweenShots: TimeInterval = 48 * 3600
+    /// Finds photos that look nearly the same (e.g., burst shots, same scene), matching GalleryCleaner logic
+    public static func findSimilarPhotos(from items: [MediaItem]) -> [SimilarGroup] {
+        let photoItems = items.filter { $0.isPhoto }
+        let candidateItems = photoItems.isEmpty ? items.filter { $0.mediaType == .image } : photoItems
+        guard candidateItems.count > 1 else { return [] }
+
+        // Sort items chronologically
+        let sorted = candidateItems.sorted {
+            ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast)
+        }
+
+        var clusters: [[MediaItem]] = []
+        var currentCluster: [MediaItem] = [sorted[0]]
+
+        for i in 1..<sorted.count {
+            let prev = sorted[i - 1]
+            let curr = sorted[i]
+
+            let prevDate = prev.creationDate ?? .distantPast
+            let currDate = curr.creationDate ?? .distantPast
+            let timeDelta = abs(currDate.timeIntervalSince(prevDate))
+
+            // Aspect ratio calculation
+            let prevAspect = Double(prev.pixelWidth) / Double(max(1, prev.pixelHeight))
+            let currAspect = Double(curr.pixelWidth) / Double(max(1, curr.pixelHeight))
+            let aspectDiff = abs(prevAspect - currAspect)
+            let invertedAspectDiff = abs((1.0 / prevAspect) - currAspect)
+            let isSimilarAspect = aspectDiff < 0.15 || invertedAspectDiff < 0.15
+
+            // Total cluster duration so far (prevents clusters spanning too many hours)
+            let clusterStartDate = currentCluster.first?.creationDate ?? .distantPast
+            let clusterSpan = abs(currDate.timeIntervalSince(clusterStartDate))
+
+            // Conditions matching GalleryCleaner:
+            // 1. Photos taken within 90 seconds with similar aspect ratio
+            // 2. Or burst shots taken within 10 seconds
+            // 3. Keep cluster span reasonable (<= 10 minutes)
+            let isBurst = timeDelta <= 10.0
+            let isSameScene = timeDelta <= 90.0 && isSimilarAspect
+            let canAddToCluster = (isBurst || isSameScene) && (clusterSpan <= 600.0)
+
+            if canAddToCluster {
+                currentCluster.append(curr)
+            } else {
+                if currentCluster.count > 1 {
+                    clusters.append(currentCluster)
+                }
+                currentCluster = [curr]
+            }
+        }
+
+        if currentCluster.count > 1 {
+            clusters.append(currentCluster)
+        }
+
+        var groups: [SimilarGroup] = []
+        for cluster in clusters {
+            // Best item is the one with highest resolution / file size
+            let best = cluster.max {
+                let s0 = $0.fileSize ?? 0
+                let s1 = $1.fileSize ?? 0
+                if s0 != s1 { return s0 < s1 }
+                return ($0.pixelWidth * $0.pixelHeight) < ($1.pixelWidth * $1.pixelHeight)
+            } ?? cluster[0]
+
+            let others = cluster.filter { $0.id != best.id }
+
+            // Similarity score based on time delta: burst photos (0-5s) ~ 98%, 30s ~ 92%, 90s ~ 85%
+            let deltas = zip(cluster, cluster.dropFirst()).map {
+                abs(($0.1.creationDate ?? .distantPast).timeIntervalSince($0.0.creationDate ?? .distantPast))
+            }
+            let avgDelta = deltas.isEmpty ? 0.0 : deltas.reduce(0, +) / Double(deltas.count)
+            let score = max(0.80, min(0.98, 0.98 - Float(avgDelta / 90.0) * 0.12))
+
+            let group = SimilarGroup(
+                primaryItem: best,
+                similarItems: others,
+                averageSimilarityScore: score,
+                selectedKeepId: best.id
+            )
+            groups.append(group)
+        }
+
+        // Sort groups by reclaimable space descending (biggest savings first, matching GalleryCleaner)
+        return groups.sorted { $0.reclaimableSpace > $1.reclaimableSpace }
+    }
 
     public static func analyze(items: [MediaItem]) -> AsyncStream<ProgressUpdate> {
         AsyncStream { continuation in
             let task = Task {
                 let total = items.count
-                guard total > 0 else {
-                    continuation.yield(ProgressUpdate(processed: 0, total: 0, currentGroups: []))
+                guard total > 1 else {
+                    continuation.yield(ProgressUpdate(processed: total, total: total, currentGroups: []))
                     continuation.finish()
                     return
                 }
 
-                let sortedItems = items.sorted {
-                    ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
-                }
+                // Yield initial starting state
+                continuation.yield(ProgressUpdate(processed: 0, total: total, currentGroups: []))
 
-                var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
-                var processedCount = 0
-
-                for item in sortedItems {
-                    if Task.isCancelled { break }
-                    processedCount += 1
-
-                    if let featurePrint = extractFeaturePrint(for: item.asset) {
-                        prints.append((item, featurePrint))
-                    }
-
-                    if processedCount % 5 == 0 && processedCount < total {
-                        continuation.yield(ProgressUpdate(processed: processedCount, total: total, currentGroups: []))
-                    }
-                }
+                let groups = findSimilarPhotos(from: items)
 
                 if Task.isCancelled {
                     continuation.finish()
                     return
                 }
 
-                var visited = Set<String>()
-                var similarGroups: [SimilarGroup] = []
-
-                for i in 0..<prints.count {
-                    if Task.isCancelled { break }
-                    let primary = prints[i]
-                    if visited.contains(primary.item.id) { continue }
-
-                    var matches: [MediaItem] = []
-                    var distances: [Float] = []
-
-                    for j in (i + 1)..<prints.count {
-                        let candidate = prints[j]
-                        if visited.contains(candidate.item.id) { continue }
-
-                        let timeDiff: TimeInterval?
-                        if let d1 = primary.item.creationDate, let d2 = candidate.item.creationDate {
-                            timeDiff = abs(d1.timeIntervalSince(d2))
-                        } else {
-                            timeDiff = nil
-                        }
-
-                        if let diff = timeDiff, diff > maxTimeIntervalBetweenShots {
-                            break
-                        }
-
-                        if timeDiff == nil && (j - i) > 25 {
-                            break
-                        }
-
-                        let threshold: Float
-                        if let diff = timeDiff, diff <= 1800 {
-                            threshold = closeTimeSimilarityThreshold
-                        } else {
-                            threshold = defaultSimilarityThreshold
-                        }
-
-                        var distance: Float = 0
-                        do {
-                            try primary.print.computeDistance(&distance, to: candidate.print)
-                            if distance <= threshold {
-                                matches.append(candidate.item)
-                                distances.append(distance)
-                                visited.insert(candidate.item.id)
-                            }
-                        } catch {
-                            continue
-                        }
-                    }
-
-                    if !matches.isEmpty {
-                        visited.insert(primary.item.id)
-                        let avgDistance = distances.reduce(0, +) / Float(distances.count)
-                        let score = max(0.5, min(0.99, 1.0 - (avgDistance * 0.85)))
-                        let group = SimilarGroup(primaryItem: primary.item, similarItems: matches, averageSimilarityScore: score)
-                        similarGroups.append(group)
-                    }
-                }
-
-                similarGroups.sort {
-                    ($0.primaryItem.creationDate ?? .distantPast) > ($1.primaryItem.creationDate ?? .distantPast)
-                }
-
-                continuation.yield(ProgressUpdate(processed: total, total: total, currentGroups: similarGroups))
+                // Yield completed state with groups
+                continuation.yield(ProgressUpdate(processed: total, total: total, currentGroups: groups))
                 continuation.finish()
             }
 
@@ -127,95 +130,13 @@ public final class SimilarPhotoAnalyzer {
     }
 
     public static func quickScan(items: [MediaItem]) -> (count: Int, previewAsset: PHAsset?) {
-        guard items.count > 1 else { return (0, nil) }
-
-        let sortedItems = items.sorted {
-            ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
-        }
-
-        var prints: [(item: MediaItem, print: VNFeaturePrintObservation)] = []
-
-        for item in sortedItems.prefix(120) {
-            if let print = extractFeaturePrint(for: item.asset) {
-                prints.append((item, print))
-            }
-        }
-
-        var matchedIds = Set<String>()
-        var preview: PHAsset? = nil
-
-        for i in 0..<prints.count {
-            let primary = prints[i]
-            for j in (i + 1)..<prints.count {
-                let candidate = prints[j]
-                if matchedIds.contains(candidate.item.id) { continue }
-
-                let timeDiff: TimeInterval?
-                if let d1 = primary.item.creationDate, let d2 = candidate.item.creationDate {
-                    timeDiff = abs(d1.timeIntervalSince(d2))
-                } else {
-                    timeDiff = nil
-                }
-
-                if let diff = timeDiff, diff > maxTimeIntervalBetweenShots {
-                    break
-                }
-
-                if timeDiff == nil && (j - i) > 25 {
-                    break
-                }
-
-                let threshold: Float
-                if let diff = timeDiff, diff <= 1800 {
-                    threshold = closeTimeSimilarityThreshold
-                } else {
-                    threshold = defaultSimilarityThreshold
-                }
-
-                var distance: Float = 0
-                if (try? primary.print.computeDistance(&distance, to: candidate.print)) != nil {
-                    if distance <= threshold {
-                        matchedIds.insert(primary.item.id)
-                        matchedIds.insert(candidate.item.id)
-                        if preview == nil {
-                            preview = primary.item.asset
-                        }
-                    }
-                }
-            }
-        }
-        return (matchedIds.count, preview)
+        let groups = findSimilarPhotos(from: items)
+        let totalCount = groups.reduce(0) { $0 + $1.allItems.count }
+        let preview = groups.first?.primaryItem.asset
+        return (totalCount, preview)
     }
 
     public static func quickSimilarCount(items: [MediaItem]) -> Int {
         quickScan(items: items).count
-    }
-
-    private static func extractFeaturePrint(for asset: PHAsset) -> VNFeaturePrintObservation? {
-        let options = PHImageRequestOptions()
-        options.isSynchronous = true
-        options.deliveryMode = .fastFormat
-        options.resizeMode = .fast
-        options.isNetworkAccessAllowed = true
-
-        var resultObservation: VNFeaturePrintObservation? = nil
-        PHImageManager.default().requestImage(
-            for: asset,
-            targetSize: CGSize(width: 256, height: 256),
-            contentMode: .aspectFill,
-            options: options
-        ) { image, _ in
-            guard let cgImage = image?.cgImage else { return }
-
-            let request = VNGenerateImageFeaturePrintRequest()
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-                resultObservation = request.results?.first as? VNFeaturePrintObservation
-            } catch {
-                resultObservation = nil
-            }
-        }
-        return resultObservation
     }
 }

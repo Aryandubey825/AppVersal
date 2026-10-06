@@ -5,13 +5,15 @@ import Photos
 public struct ThumbnailCell: View {
     public let item: MediaItem
     public let isSelected: Bool
+    public let isBest: Bool
     public let onSelectToggle: (() -> Void)?
 
     @State private var image: UIImage? = nil
 
-    public init(item: MediaItem, isSelected: Bool = false, onSelectToggle: (() -> Void)? = nil) {
+    public init(item: MediaItem, isSelected: Bool = false, isBest: Bool = false, onSelectToggle: (() -> Void)? = nil) {
         self.item = item
         self.isSelected = isSelected
+        self.isBest = isBest
         self.onSelectToggle = onSelectToggle
     }
 
@@ -35,6 +37,23 @@ public struct ThumbnailCell: View {
                                     Image(systemName: item.isVideo ? "video" : "photo")
                                         .foregroundColor(.secondary)
                                 )
+                        }
+
+                        if isBest {
+                            VStack {
+                                HStack {
+                                    Text("BEST")
+                                        .font(.system(size: 9, weight: .heavy))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 3)
+                                        .background(Color.blue)
+                                        .clipShape(Capsule())
+                                        .padding(4)
+                                    Spacer()
+                                }
+                                Spacer()
+                            }
                         }
 
                         if onSelectToggle != nil {

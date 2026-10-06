@@ -32,6 +32,20 @@ public struct MediaItem: Identifiable, Hashable, Sendable {
         mediaType == .video
     }
 
+    public nonisolated var isPhoto: Bool {
+        mediaType == .image && !isScreenshot
+    }
+
+    public nonisolated var formattedSize: String {
+        guard let size = fileSize, size > 0 else { return "" }
+        return ByteFormatter.format(size)
+    }
+
+    public nonisolated var dimensionsString: String {
+        guard pixelWidth > 0 && pixelHeight > 0 else { return "" }
+        return "\(pixelWidth) × \(pixelHeight)"
+    }
+
     public nonisolated var formattedDuration: String {
         guard isVideo else { return "" }
         let formatter = DateComponentsFormatter()

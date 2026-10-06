@@ -55,28 +55,59 @@ public struct SimilarPhotosView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(AppTheme.Spacing.lg)
                     } else {
+                        // Summary Banner matching GalleryCleaner
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("\(viewModel.filteredGroups.count) Similar Photo Groups")
+                                    .font(.subheadline.weight(.semibold))
+
+                                Text("Reclaimable space: \(viewModel.formattedTotalReclaimableSpace)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button(viewModel.allInferiorSelected ? "Deselect All" : "Auto-Select Inferior") {
+                                viewModel.toggleAutoSelect()
+                            }
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.pink)
+                        }
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+
                         ScrollView(showsIndicators: false) {
                             LazyVStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
-                                ForEach(viewModel.filteredGroups) { group in
+                                ForEach(Array(viewModel.filteredGroups.enumerated()), id: \.element.id) { index, group in
                                     VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                                         HStack {
-                                            Text("\(group.allItems.count) Similar Shots")
+                                            Text("Group \(index + 1) • \(group.formattedScore)")
                                                 .font(.headline)
 
                                             Spacer()
 
-                                            Text("\(Int(group.averageSimilarityScore * 100))% match")
+                                            Text("\(group.formattedReclaimableSpace) reclaimable")
                                                 .font(.subheadline.weight(.semibold))
                                                 .foregroundColor(.pink)
                                         }
 
                                         LazyVGrid(columns: columns, spacing: 8) {
                                             ForEach(group.allItems) { item in
-                                                ThumbnailCell(
-                                                    item: item,
-                                                    isSelected: viewModel.selectedItemIds.contains(item.id)
-                                                ) {
-                                                    viewModel.toggleSelection(id: item.id)
+                                                let isBest = (item.id == group.bestItem?.id)
+                                                VStack(spacing: 4) {
+                                                    ThumbnailCell(
+                                                        item: item,
+                                                        isSelected: viewModel.selectedItemIds.contains(item.id),
+                                                        isBest: isBest
+                                                    ) {
+                                                        viewModel.toggleSelection(id: item.id)
+                                                    }
+
+                                                    Text(isBest ? "Best Shot" : "Similar")
+                                                        .font(.caption2.weight(.medium))
+                                                        .foregroundColor(isBest ? .blue : .secondary)
                                                 }
                                             }
                                         }
@@ -93,7 +124,7 @@ public struct SimilarPhotosView: View {
                             if !viewModel.selectedItemIds.isEmpty {
                                 NativeDeleteBottomBar(
                                     selectedCount: viewModel.selectedItemIds.count,
-                                    actionTitle: "Delete Selected"
+                                    actionTitle: "Clean \(viewModel.selectedItemIds.count) Similar (\(viewModel.formattedSelectedReclaimableSpace))"
                                 ) {
                                     showDeleteConfirmation = true
                                 }
@@ -123,6 +154,10 @@ public struct SimilarPhotosView: View {
         .onAppear {
             if case .idle = viewModel.state {
                 viewModel.startAnalysis()
+            } else if case .loaded = viewModel.state {
+                if viewModel.selectedItemIds.isEmpty {
+                    viewModel.autoSelectInferior()
+                }
             }
         }
         .refreshable {

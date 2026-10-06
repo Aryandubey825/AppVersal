@@ -157,7 +157,11 @@ public final class PhotoLibraryService: NSObject, @unchecked Sendable, PHPhotoLi
             let estimatedBytes = Int64(asset.duration * 2_500_000)
             return max(500_000, estimatedBytes)
         }
-        return nil
+        let estimatedBytes = Int64(asset.pixelWidth * asset.pixelHeight * 3) / 8
+        if estimatedBytes > 0 {
+            return estimatedBytes
+        }
+        return 2_500_000
     }
 
     public nonisolated func deleteAssets(_ assets: [PHAsset]) async throws {

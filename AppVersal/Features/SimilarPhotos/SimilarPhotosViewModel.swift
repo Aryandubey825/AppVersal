@@ -17,10 +17,48 @@ public final class SimilarPhotosViewModel: ObservableObject {
             guard matching.count >= 2 else { return nil }
             return SimilarGroup(
                 id: group.id,
-                primaryItem: matching[0],
-                similarItems: Array(matching.dropFirst()),
-                averageSimilarityScore: group.averageSimilarityScore
+                items: matching,
+                similarityScore: Double(group.averageSimilarityScore),
+                selectedKeepId: group.selectedKeepId
             )
+        }
+    }
+
+    public var totalReclaimableSpace: Int64 {
+        filteredGroups.reduce(0) { $0 + $1.reclaimableSpace }
+    }
+
+    public var formattedTotalReclaimableSpace: String {
+        ByteFormatter.format(totalReclaimableSpace)
+    }
+
+    public var selectedReclaimableSpace: Int64 {
+        let allItems = filteredGroups.flatMap { $0.allItems }
+        return allItems
+            .filter { selectedItemIds.contains($0.id) }
+            .compactMap { $0.fileSize }
+            .reduce(0, +)
+    }
+
+    public var formattedSelectedReclaimableSpace: String {
+        ByteFormatter.format(selectedReclaimableSpace)
+    }
+
+    public var allInferiorSelected: Bool {
+        let inferiors = filteredGroups.flatMap { $0.removableItems }.map { $0.id }
+        return !inferiors.isEmpty && inferiors.allSatisfy { selectedItemIds.contains($0) }
+    }
+
+    public func autoSelectInferior() {
+        let inferiors = filteredGroups.flatMap { $0.removableItems }.map { $0.id }
+        selectedItemIds = Set(inferiors)
+    }
+
+    public func toggleAutoSelect() {
+        if allInferiorSelected {
+            selectedItemIds.removeAll()
+        } else {
+            autoSelectInferior()
         }
     }
 
@@ -70,6 +108,7 @@ public final class SimilarPhotosViewModel: ObservableObject {
                         self.state = .empty
                     } else {
                         self.state = .loaded(update.currentGroups)
+                        self.autoSelectInferior()
                     }
                 }
             }
@@ -108,9 +147,9 @@ public final class SimilarPhotosViewModel: ObservableObject {
             guard remaining.count >= 2 else { return nil }
             return SimilarGroup(
                 id: group.id,
-                primaryItem: remaining[0],
-                similarItems: Array(remaining.dropFirst()),
-                averageSimilarityScore: group.averageSimilarityScore
+                items: remaining,
+                similarityScore: Double(group.averageSimilarityScore),
+                selectedKeepId: group.selectedKeepId
             )
         }
 
