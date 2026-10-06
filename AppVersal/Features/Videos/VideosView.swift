@@ -12,19 +12,41 @@ public struct VideosView: View {
     public init() {}
 
     public var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            DateFilterBar(
+                selectedFilter: $viewModel.selectedDateFilter,
+                accentColor: MediaCategory.videos.themeColor
+            )
+
             if viewModel.isLoading {
                 ProgressView("Loading Videos...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.items.isEmpty {
                 EmptyStateView(
                     iconName: "video.fill",
                     title: "No Videos",
                     message: "Your gallery doesn't contain any videos."
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.filteredItems.isEmpty {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    EmptyStateView(
+                        iconName: "calendar.badge.exclamationmark",
+                        title: "No Videos Found",
+                        message: "No videos found for \(viewModel.selectedDateFilter.title)."
+                    )
+                    Button("Reset Filter") {
+                        viewModel.selectedDateFilter = .all
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(MediaCategory.videos.themeColor)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(AppTheme.Spacing.lg)
             } else {
                 ScrollView(showsIndicators: false) {
                     LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(viewModel.items) { item in
+                        ForEach(viewModel.filteredItems) { item in
                             ThumbnailCell(
                                 item: item,
                                 isSelected: viewModel.selectedItemIds.contains(item.id)
@@ -33,15 +55,21 @@ public struct VideosView: View {
                             }
                         }
                     }
-                    .padding(12)
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.top, 4)
+                    .padding(.bottom, AppTheme.Spacing.lg)
                 }
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
                 .safeAreaInset(edge: .bottom) {
                     if !viewModel.selectedItemIds.isEmpty {
-                        bottomDeleteBar
-                            .background(.ultraThinMaterial)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        NativeDeleteBottomBar(
+                            selectedCount: viewModel.selectedItemIds.count,
+                            actionTitle: "Delete"
+                        ) {
+                            showDeleteConfirmation = true
+                        }
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
             }
@@ -68,27 +96,5 @@ public struct VideosView: View {
         .refreshable {
             viewModel.loadVideos()
         }
-    }
-
-    private var bottomDeleteBar: some View {
-        HStack {
-            Text("\(viewModel.selectedItemIds.count) selected")
-                .font(.headline)
-
-            Spacer()
-
-            Button(role: .destructive) {
-                showDeleteConfirmation = true
-            } label: {
-                Label("Delete", systemImage: "trash.fill")
-                    .font(.headline)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-        }
-        .padding()
     }
 }

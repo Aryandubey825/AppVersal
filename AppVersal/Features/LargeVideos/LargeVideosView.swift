@@ -17,13 +17,10 @@ public struct LargeVideosView: View {
             case .idle:
                 Color.clear
             case .loading(let processed, let total):
-                VStack(spacing: AppTheme.Spacing.lg) {
-                    Spacer()
-                    ProgressHeader(title: "Sorting Large Videos", processed: processed, total: total) {
-                        viewModel.cancelAnalysis()
-                    }
-                    Spacer()
+                ProgressHeader(title: "Sorting Large Videos", processed: processed, total: total) {
+                    viewModel.cancelAnalysis()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
             case .empty:
                 EmptyStateView(
@@ -31,29 +28,61 @@ public struct LargeVideosView: View {
                     title: "No Videos",
                     message: "No video files found in your photo gallery."
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .error(let msg):
                 EmptyStateView(iconName: "exclamationmark.triangle.fill", title: "Error", message: msg)
-            case .loaded(let videos):
-                ScrollView(showsIndicators: false) {
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(videos) { item in
-                            ThumbnailCell(
-                                item: item,
-                                isSelected: viewModel.selectedItemIds.contains(item.id)
-                            ) {
-                                viewModel.toggleSelection(id: item.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .loaded:
+                VStack(spacing: 0) {
+                    DateFilterBar(
+                        selectedFilter: $viewModel.selectedDateFilter,
+                        accentColor: MediaCategory.largeVideos.themeColor
+                    )
+
+                    if viewModel.filteredVideos.isEmpty {
+                        VStack(spacing: AppTheme.Spacing.md) {
+                            EmptyStateView(
+                                iconName: "calendar.badge.exclamationmark",
+                                title: "No Large Videos Found",
+                                message: "No large videos found for \(viewModel.selectedDateFilter.title)."
+                            )
+                            Button("Reset Filter") {
+                                viewModel.selectedDateFilter = .all
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(MediaCategory.largeVideos.themeColor)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(AppTheme.Spacing.lg)
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                ForEach(viewModel.filteredVideos) { item in
+                                    ThumbnailCell(
+                                        item: item,
+                                        isSelected: viewModel.selectedItemIds.contains(item.id)
+                                    ) {
+                                        viewModel.toggleSelection(id: item.id)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, AppTheme.Spacing.md)
+                            .padding(.top, 4)
+                            .padding(.bottom, AppTheme.Spacing.lg)
+                        }
+                        .scrollIndicators(.hidden)
+                        .scrollBounceBehavior(.basedOnSize)
+                        .safeAreaInset(edge: .bottom) {
+                            if !viewModel.selectedItemIds.isEmpty {
+                                NativeDeleteBottomBar(
+                                    selectedCount: viewModel.selectedItemIds.count,
+                                    actionTitle: "Delete Selected"
+                                ) {
+                                    showDeleteConfirmation = true
+                                }
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
-                    }
-                    .padding(12)
-                }
-                .scrollIndicators(.hidden)
-                .scrollBounceBehavior(.basedOnSize)
-                .safeAreaInset(edge: .bottom) {
-                    if !viewModel.selectedItemIds.isEmpty {
-                        bottomDeleteBar
-                            .background(.ultraThinMaterial)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
             }
@@ -77,27 +106,5 @@ public struct LargeVideosView: View {
         .onAppear {
             viewModel.startAnalysis()
         }
-    }
-
-    private var bottomDeleteBar: some View {
-        HStack {
-            Text("\(viewModel.selectedItemIds.count) selected")
-                .font(.headline)
-
-            Spacer()
-
-            Button(role: .destructive) {
-                showDeleteConfirmation = true
-            } label: {
-                Label("Delete Selected", systemImage: "trash.fill")
-                    .font(.headline)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-        }
-        .padding()
     }
 }

@@ -7,6 +7,22 @@ import OSLog
 public final class SimilarPhotosViewModel: ObservableObject {
     @Published public private(set) var state: AnalysisState<[SimilarGroup]> = .idle
     @Published public var selectedItemIds: Set<String> = []
+    @Published public var selectedDateFilter: DateFilterOption = .all
+
+    public var filteredGroups: [SimilarGroup] {
+        guard case .loaded(let groups) = state else { return [] }
+        guard selectedDateFilter.isFiltered else { return groups }
+        return groups.compactMap { group in
+            let matching = group.allItems.filter { selectedDateFilter.matches(date: $0.creationDate) }
+            guard matching.count >= 2 else { return nil }
+            return SimilarGroup(
+                id: group.id,
+                primaryItem: matching[0],
+                similarItems: Array(matching.dropFirst()),
+                averageSimilarityScore: group.averageSimilarityScore
+            )
+        }
+    }
 
     private var analysisTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()

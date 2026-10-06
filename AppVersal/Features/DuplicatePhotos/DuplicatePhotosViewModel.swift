@@ -7,6 +7,17 @@ import OSLog
 public final class DuplicatePhotosViewModel: ObservableObject {
     @Published public private(set) var state: AnalysisState<[DuplicateGroup]> = .idle
     @Published public var selectedItemIds: Set<String> = []
+    @Published public var selectedDateFilter: DateFilterOption = .all
+
+    public var filteredGroups: [DuplicateGroup] {
+        guard case .loaded(let groups) = state else { return [] }
+        guard selectedDateFilter.isFiltered else { return groups }
+        return groups.compactMap { group in
+            let matching = group.items.filter { selectedDateFilter.matches(date: $0.creationDate) }
+            guard matching.count >= 2 else { return nil }
+            return DuplicateGroup(id: group.id, fingerprint: group.fingerprint, items: matching)
+        }
+    }
 
     private var analysisTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()

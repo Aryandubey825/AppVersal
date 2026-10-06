@@ -8,6 +8,12 @@ public final class ScreenshotsViewModel: ObservableObject {
     @Published public private(set) var items: [MediaItem] = []
     @Published public private(set) var isLoading: Bool = false
     @Published public var selectedItemIds: Set<String> = []
+    @Published public var selectedDateFilter: DateFilterOption = .all
+
+    public var filteredItems: [MediaItem] {
+        guard selectedDateFilter.isFiltered else { return items }
+        return items.filter { selectedDateFilter.matches(date: $0.creationDate) }
+    }
 
     private var cancellables = Set<AnyCancellable>()
 

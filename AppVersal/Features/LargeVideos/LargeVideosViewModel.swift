@@ -7,6 +7,13 @@ import OSLog
 public final class LargeVideosViewModel: ObservableObject {
     @Published public private(set) var state: AnalysisState<[MediaItem]> = .idle
     @Published public var selectedItemIds: Set<String> = []
+    @Published public var selectedDateFilter: DateFilterOption = .all
+
+    public var filteredVideos: [MediaItem] {
+        guard case .loaded(let videos) = state else { return [] }
+        guard selectedDateFilter.isFiltered else { return videos }
+        return videos.filter { selectedDateFilter.matches(date: $0.creationDate) }
+    }
 
     private var analysisTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()

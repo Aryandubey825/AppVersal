@@ -57,17 +57,17 @@ public struct SwipeCardView: View {
 
             if isTopCard {
                 HStack(spacing: 28) {
-                    Button {
+                    Button(role: .destructive) {
                         onTrashTap?()
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(Color.black.opacity(0.6))
+                                .fill(.ultraThinMaterial)
                                 .frame(width: 52, height: 52)
 
-                            Image(systemName: "trash.fill")
+                            Image(systemName: "trash")
                                 .font(.title3.weight(.bold))
-                                .foregroundColor(.pink)
+                                .foregroundColor(.red)
                         }
                         .frame(width: 52, height: 52)
                         .contentShape(Circle())
@@ -82,7 +82,7 @@ public struct SwipeCardView: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(Color.black.opacity(0.6))
+                                .fill(.ultraThinMaterial)
                                 .frame(width: 52, height: 52)
 
                             Image(systemName: "suit.heart.fill")
@@ -132,8 +132,9 @@ public struct SwipeCardView: View {
             contentMode: .aspectFit,
             options: options
         ) { fullImg, info in
-            if let fullImg = fullImg {
-                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            guard let fullImg = fullImg else { return }
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            DispatchQueue.main.async {
                 if !isDegraded {
                     self.image = fullImg
                 } else if self.image == nil {

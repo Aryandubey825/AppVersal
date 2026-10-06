@@ -6,10 +6,16 @@ public struct TrashView: View {
     @State private var selectedItemIds: Set<String> = []
     @State private var showEmptyTrashAlert: Bool = false
     @State private var isProcessing: Bool = false
+    @State private var selectedDateFilter: DateFilterOption = .all
 
     private let columns = [
         GridItem(.adaptive(minimum: 100, maximum: 160), spacing: 8)
     ]
+
+    private var filteredItems: [MediaItem] {
+        guard selectedDateFilter.isFiltered else { return trashManager.trashedItems }
+        return trashManager.trashedItems.filter { selectedDateFilter.matches(date: $0.creationDate) }
+    }
 
     public init() {}
 
@@ -30,24 +36,45 @@ public struct TrashView: View {
                     VStack(spacing: 0) {
                         headerBanner
 
-                        ScrollView(showsIndicators: false) {
-                            LazyVGrid(columns: columns, spacing: 8) {
-                                ForEach(trashManager.trashedItems) { item in
-                                    ThumbnailCell(
-                                        item: item,
-                                        isSelected: selectedItemIds.contains(item.id)
-                                    ) {
-                                        toggleSelection(id: item.id)
+                        DateFilterBar(
+                            selectedFilter: $selectedDateFilter,
+                            accentColor: .red
+                        )
+
+                        if filteredItems.isEmpty {
+                            VStack(spacing: AppTheme.Spacing.md) {
+                                Spacer()
+                                EmptyStateView(
+                                    iconName: "calendar.badge.exclamationmark",
+                                    title: "No Trashed Items Found",
+                                    message: "No trashed items found for \(selectedDateFilter.title)."
+                                )
+                                Button("Reset Filter") {
+                                    selectedDateFilter = .all
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.red)
+                                Spacer()
+                            }
+                        } else {
+                            ScrollView(showsIndicators: false) {
+                                LazyVGrid(columns: columns, spacing: 8) {
+                                    ForEach(filteredItems) { item in
+                                        ThumbnailCell(
+                                            item: item,
+                                            isSelected: selectedItemIds.contains(item.id)
+                                        ) {
+                                            toggleSelection(id: item.id)
+                                        }
                                     }
                                 }
+                                .padding(AppTheme.Spacing.md)
                             }
-                            .padding(AppTheme.Spacing.md)
-                        }
-                        .scrollIndicators(.hidden)
-                        .scrollBounceBehavior(.basedOnSize)
-                        .safeAreaInset(edge: .bottom) {
-                            bottomActionBar
-                                .background(.ultraThinMaterial)
+                            .scrollIndicators(.hidden)
+                            .scrollBounceBehavior(.basedOnSize)
+                            .safeAreaInset(edge: .bottom) {
+                                bottomActionBar
+                            }
                         }
                     }
                 }
@@ -57,10 +84,13 @@ public struct TrashView: View {
             .toolbar {
                 if !trashManager.trashedItems.isEmpty {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Empty All") {
+                        Button(role: .destructive) {
                             showEmptyTrashAlert = true
+                        } label: {
+                            Text("Empty All")
+                                .font(.subheadline.bold())
                         }
-                        .foregroundColor(.red)
+                        .tint(.red)
                         .frame(minHeight: 44)
                         .contentShape(Rectangle())
                     }
@@ -96,10 +126,10 @@ public struct TrashView: View {
             Spacer()
 
             Button("Select All") {
-                if selectedItemIds.count == trashManager.trashedItems.count {
+                if selectedItemIds.count == filteredItems.count {
                     selectedItemIds.removeAll()
                 } else {
-                    selectedItemIds = Set(trashManager.trashedItems.map { $0.id })
+                    selectedItemIds = Set(filteredItems.map { $0.id })
                 }
             }
             .font(.subheadline.bold())
@@ -115,43 +145,44 @@ public struct TrashView: View {
         HStack(spacing: AppTheme.Spacing.md) {
             Button {
                 let itemsToRestore = trashManager.trashedItems.filter { selectedItemIds.contains($0.id) }
-                trashManager.restore(items: itemsToRestore.isEmpty ? trashManager.trashedItems : itemsToRestore)
+                trashManager.restore(items: itemsToRestore.isEmpty ? filteredItems : itemsToRestore)
                 selectedItemIds.removeAll()
             } label: {
-                HStack {
-                    Image(systemName: "arrow.uturn.backward.circle.fill")
-                    Text(selectedItemIds.isEmpty ? "Restore All" : "Restore (\(selectedItemIds.count))")
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-                .contentShape(Rectangle())
+                Label(selectedItemIds.isEmpty ? "Restore All" : "Restore (\(selectedItemIds.count))", systemImage: "arrow.uturn.backward.circle")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(.blue)
 
             Button(role: .destructive) {
                 Task {
                     let itemsToDelete = trashManager.trashedItems.filter { selectedItemIds.contains($0.id) }
-                    try? await trashManager.deletePermanently(items: itemsToDelete.isEmpty ? trashManager.trashedItems : itemsToDelete)
+                    try? await trashManager.deletePermanently(items: itemsToDelete.isEmpty ? filteredItems : itemsToDelete)
                     selectedItemIds.removeAll()
                 }
             } label: {
-                HStack {
-                    Image(systemName: "trash.fill")
-                    Text(selectedItemIds.isEmpty ? "Delete All" : "Delete (\(selectedItemIds.count))")
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.red)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-                .contentShape(Rectangle())
+                Label(selectedItemIds.isEmpty ? "Delete All" : "Delete (\(selectedItemIds.count))", systemImage: "trash")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(.red)
         }
-        .padding(AppTheme.Spacing.md)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     private var recentlyDeletedInfoCard: some View {
