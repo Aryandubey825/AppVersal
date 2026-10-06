@@ -1,63 +1,131 @@
-[Uploading README.md…]()
-# Gallery Cleaner — Production iOS Application
+[README.md](https://github.com/user-attachments/files/33116000/README.md)
+# AppVersal — Gallery Cleaner (iOS)
 
-An iOS Gallery Cleaner built with Swift, SwiftUI, PhotoKit, and Apple's Vision framework.
-
-## 📱 Features
-
-- **Screenshots:** Instantly enumerates screen captures using `PHAssetMediaSubtype.photoScreenshot`.
-- **Videos:** Displays all recorded video assets lazily with duration and storage metrics.
-- **Duplicate Photos:** Identifies exact photo duplicates using tiered deterministic fingerprinting (size, pixel dimensions, and CryptoKit SHA-256).
-- **Similar Photos:** Detects visually similar shots using candidate temporal bucketing and Apple's Vision framework (`VNGenerateImageFeaturePrintRequest`).
-- **Duplicate Videos:** Finds exact video duplicates via duration pre-filtering and 64KB chunk stream hashing without memory pressure.
-- **Large Videos:** Ranks video files strictly largest-first with human-readable size formatting (`ByteCountFormatter`).
+A modern, high-performance iOS Gallery Cleaner built with **SwiftUI**, **PhotoKit**, and **Swift Concurrency**. Engineered for maximum speed, 100% on-device privacy, and seamless photo library management.
 
 ---
 
-## 🏗️ Architecture
+## 🌟 Key Highlights
 
-The app adopts a clean MVVM + Actor-isolated Service architecture:
+- **⚡ Blazing Fast On-Device Analysis:** Instant scanning using metadata clustering and streamed hash fingerprinting. No UI freezing, zero background memory leaks.
+- **🔒 100% Private & Offline:** Zero external network calls or cloud uploads. All photo library analysis runs locally on the device.
+- **🛡️ Two-Stage Safe Deletion:** Items are moved to an in-app **Trash** bin first, allowing instant restoration before permanent deletion.
+- **🎨 Native Apple Human Interface Guidelines (HIG):** Adaptive grid, interactive swipe cards, dynamic system blur, native haptic feedback, and fluid spring animations.
+
+---
+
+## 📱 Features & Modules
+
+| Category | Description | Performance & Logic |
+| :--- | :--- | :--- |
+| 📸 **Similar Photos** | Groups burst shots, continuous exposures, and duplicate poses taken within close time windows. | **Chronological & Aspect-Ratio Clustering:** Clusters shots taken within 90s with matching aspect ratios. Identifies **Best Shot** (highest resolution/size) and enables **1-Tap Auto-Select** for inferior photos. |
+| 📑 **Duplicate Photos** | Detects exact photo duplicates across the gallery. | Tiered deterministic hashing (resolution matching + SHA-256 fingerprinting) avoiding unnecessary image decodes. |
+| 🎬 **Duplicate Videos** | Finds identical video recordings and saved duplicates. | Duration bucketing + bounded chunk stream hashing (64KB header + trailer). |
+| 🎥 **Similar Videos** | Identifies repetitive or continuous video takes. | Evaluates timestamp proximity, dimensions, and duration delta. |
+| 🐘 **Large Videos** | Highlights videos consuming the most storage space. | Sorted strictly descending by byte size with human-readable formatting. |
+| 📱 **Screenshots** | Isolates screen captures and device snips. | Uses `PHAssetMediaSubtype.photoScreenshot` and dimensional pattern heuristics. |
+| 🗑️ **Trash Bin** | In-app recovery station for deleted media. | Safe-stage quarantine with Restore and Permanent Deletion capabilities. |
+| 🗓️ **Date Filtering** | Filter any view by time period. | Instant multi-option filtering: All Time, Past Week, Past Month, Past Year. |
+
+---
+
+## 🚀 Similar Photos Engine (Gallery Cleaner Architecture)
+
+The similarity detection engine in **AppVersal** employs a battle-tested chronological clustering pipeline:
+
+1. **Chronological Sorting:** Photos are sorted chronologically ($O(N \log N)$).
+2. **Temporal Proximity Window:** Adjacent items within a $\le 90\text{s}$ time window (or burst takes within $\le 10\text{s}$) are evaluated.
+3. **Aspect-Ratio & Orientation Invariance:** Computes relative aspect ratios ($W/H$ and $H/W$) with a tight tolerance ($\Delta < 0.15$).
+4. **Best Shot Keeper Selection:** Evaluates pixel resolution ($W \times H$) and file size to crown the highest-quality photo as **`BEST`**.
+5. **Smart Auto-Select:** Automatically pre-selects all inferior/redundant shots so the user can reclaim space in a single tap while preserving the best memory.
+6. **Reclaimable Space Calculation:** Dynamically calculates potential storage savings in real-time.
+
+---
+
+## 🏗️ Architecture & Project Structure
+
+The project follows the clean **MVVM + Actor-isolated Services** pattern:
 
 ```text
 AppVersal/
-├── App/                # App entry point & environment configuration
+├── AppVersalApp.swift                 # App entry point & lifecycle
+├── ContentView.swift                  # Navigation shell & root router
 ├── Core/
-│   ├── Photos/         # PhotoKit authorization, change observers, and fetchers
-│   ├── Media/          # Image caching service wrapping PHCachingImageManager
-│   ├── Analysis/       # Actor-isolated background engines for duplicate/similarity analysis
-│   └── Utilities/      # Byte formatters and structured OSLog logger
-├── Models/             # Domain models (MediaItem, DuplicateGroup, SimilarGroup, AnalysisState)
-├── Features/           # View & ViewModel pairs for Home and all 6 categories
-└── DesignSystem/       # AppTheme tokens, cards, thumbnail cells, progress headers, empty states
+│   ├── Analysis/
+│   │   ├── SimilarPhotoAnalyzer.swift   # High-speed chronological clustering engine
+│   │   ├── SimilarVideoAnalyzer.swift   # Video similarity analyzer
+│   │   ├── DuplicatePhotoAnalyzer.swift # Tiered image SHA-256 duplicate detector
+│   │   ├── DuplicateVideoAnalyzer.swift # Video chunk hashing engine
+│   │   └── GalleryAnalysisActor.swift   # Isolated background global actor
+│   ├── Photos/
+│   │   ├── PhotoLibraryService.swift    # PhotoKit fetchers & change observer
+│   │   └── PhotoAuthorizationService.swift # Granular permission flow handler
+│   ├── Media/
+│   │   ├── TrashManager.swift           # In-app trash persistence & restore engine
+│   │   ├── MediaThumbnailService.swift  # Cached PHImageManager thumbnail pipeline
+│   │   └── HeroThumbnailCache.swift     # High-priority preview cache
+│   └── Utilities/
+│       ├── ByteFormatter.swift          # Human-readable size converter (MB/GB)
+│       └── Logger.swift                 # Unified Apple OSLog logging
+├── Models/
+│   ├── MediaItem.swift                # Core domain model for photos & videos
+│   ├── SimilarGroup.swift             # Grouping model with bestItem & reclaimable space
+│   ├── DuplicateGroup.swift           # Exact duplicate cluster model
+│   ├── MediaCategory.swift            # 7 cleaner categories & metadata
+│   ├── AnalysisState.swift            # State enum (idle, loading, loaded, empty, error)
+│   └── DateFilterOption.swift         # Date filtering options
+├── Features/
+│   ├── Home/                          # Storage breakdown dashboard & category cards
+│   ├── SimilarPhotos/                 # Similar photos view with auto-select & Best badge
+│   ├── SimilarVideos/                 # Similar videos review interface
+│   ├── DuplicatePhotos/               # Exact duplicate photos cleaner
+│   ├── DuplicateVideos/               # Exact duplicate videos cleaner
+│   ├── LargeVideos/                   # Storage-sorted large video manager
+│   ├── Screenshots/                   # Dedicated screenshots clean-up view
+│   ├── Trash/                         # Restore or permanent purge bin
+│   └── Explore/                       # Interactive swipe-deck timeline review
+└── DesignSystem/
+    ├── AppTheme.swift                 # Color tokens, typography, spacing, corner radii
+    └── Components/
+        ├── ThumbnailCell.swift        # Async thumbnail cell with BEST badge & selection
+        ├── NativeDeleteBottomBar.swift # Liquid floating delete bar
+        ├── DateFilterBar.swift        # Capsule filter selector
+        ├── ProgressHeader.swift       # Linear progress header during analysis
+        └── EmptyStateView.swift       # Delightful vector empty states
 ```
 
 ---
 
-## 🔬 Algorithmic & Performance Strategy
+## ⚙️ Technical Requirements
 
-1. **Exact Duplicate Photo Hashing:** Avoids heavy decoding by pre-filtering assets by file size and pixel resolution before executing SHA-256 data hashing on candidates.
-2. **Visual Similarity Candidate Bucketing:** Avoids $O(N^2)$ visual comparison explosions by clustering photos shot within 10-minute time windows before generating Vision feature vectors.
-3. **Duplicate Video Chunk Hashing:** Computes fingerprints via bounded byte streams (64KB head + 64KB tail), keeping RAM consumption under 10MB during video analysis.
-4. **Main-Thread Safety:** All heavy analysis is offloaded to a dedicated `@GalleryAnalysisActor`. Progress updates stream continuously via `AsyncStream<AnalysisProgress>`.
-
----
-
-## 🔐 Privacy & Permission Strategy
-
-- **100% On-Device Processing:** Zero cloud uploads or external AI dependencies. All analysis is local using native Apple frameworks (`PhotoKit` & `Vision`).
-- **Permission States:** Gracefully manages `authorized`, `limited`, `denied`, and `notDetermined` PhotoKit permission states.
-- **Zero Sensitive Data Logging:** `OSLog` telemetry excludes media contents and PII.
+- **iOS Deployment Target:** iOS 17.0+
+- **Xcode Version:** Xcode 15.0 or later
+- **Language:** Swift 5.9 / Swift 6 compatible
+- **Frameworks:** SwiftUI, PhotoKit, PhotosUI, CryptoKit, OSLog
 
 ---
 
-## 🚀 How to Run
+## 🛠️ How to Build and Run
 
-1. Open `AppVersal/AppVersal.xcodeproj` in **Xcode 15.0+**.
-2. Select an iOS 17.0+ Simulator or attached physical iOS device.
-3. Press **⌘R** to build and launch the application.
+1. Clone or open the repository:
+   ```bash
+   cd /Users/aryan/Documents/GitHub/Appversel/AppVersal
+   ```
+2. Double-click `AppVersal.xcodeproj` to open in **Xcode**.
+3. Select your target device or simulator (e.g., iPhone 15 Pro, iOS 17+).
+4. Press **⌘ + R** to run.
+5. On the first launch, grant **Photo Library Access** when prompted.
 
 ---
 
-## 🧪 Testing
+## 🔒 Permissions & Privacy
 
-Unit tests covering formatters, domain models, and analyzer logic are located in `AppVersal/AppVersalTests/`. Run using **⌘U** in Xcode.
+In your `Info.plist`, ensure the following keys are set:
+- `NSPhotoLibraryUsageDescription`: *"AppVersal requires access to your photos to identify duplicate and similar media."*
+- `NSPhotoLibraryAddUsageDescription`: *"AppVersal requires photo library write permissions to clean and organize media."*
+
+---
+
+## 📄 License
+
+Developed for personal and commercial gallery optimization. All rights reserved.
